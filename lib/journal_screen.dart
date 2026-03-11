@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
@@ -14,14 +15,17 @@ class _JournalScreenState extends State<JournalScreen> {
   bool _isAnalyzing = false;
   int _wordCount = 0;
 
+  // Replace with your actual Gemini API key
+  static const String _apiKey = 'AIzaSyBiHhDSJJWJULQZvxv_pyWoqv0Sv4Kz64w';
+
   final Map<String, Map<String, dynamic>> _emotionData = {
-    'joy': {'emoji': '😊', 'color': Color(0xFFFFB800), 'label': 'Joyful'},
-    'sadness': {'emoji': '😔', 'color': Color(0xFF4A90D9), 'label': 'Sad'},
-    'anger': {'emoji': '😤', 'color': Color(0xFFE74C3C), 'label': 'Angry'},
-    'fear': {'emoji': '😰', 'color': Color(0xFF9B59B6), 'label': 'Anxious'},
+    'joy':      {'emoji': '😊', 'color': Color(0xFFFFB800), 'label': 'Joyful'},
+    'sadness':  {'emoji': '😔', 'color': Color(0xFF4A90D9), 'label': 'Sad'},
+    'anger':    {'emoji': '😤', 'color': Color(0xFFE74C3C), 'label': 'Angry'},
+    'fear':     {'emoji': '😰', 'color': Color(0xFF9B59B6), 'label': 'Anxious'},
     'surprise': {'emoji': '😲', 'color': Color(0xFF00B4B4), 'label': 'Surprised'},
-    'disgust': {'emoji': '🤢', 'color': Color(0xFF27AE60), 'label': 'Disgusted'},
-    'neutral': {'emoji': '😐', 'color': Color(0xFF95A5A6), 'label': 'Neutral'},
+    'disgust':  {'emoji': '🤢', 'color': Color(0xFF27AE60), 'label': 'Disgusted'},
+    'neutral':  {'emoji': '😐', 'color': Color(0xFF95A5A6), 'label': 'Neutral'},
   };
 
   void _updateWordCount(String text) {
@@ -31,7 +35,43 @@ class _JournalScreenState extends State<JournalScreen> {
     });
   }
 
-  // Simple local emotion detection (before we add Gemini API)
+  Future<Map<String, String>> _analyzeWithGemini(String text) async {
+    try {
+      final model = GenerativeModel(
+        model: 'gemini-1.5-flash',
+        apiKey: _apiKey,
+      );
+
+      final prompt = '''
+Analyze the emotion in this journal entry and respond in exactly this format:
+EMOTION: [one of: joy, sadness, anger, fear, surprise, disgust, neutral]
+RESPONSE: [a warm, empathetic 2-3 sentence response to the person]
+
+Journal entry: "$text"
+''';
+
+      final response = await model.generateContent([Content.text(prompt)]);
+      final responseText = response.text ?? '';
+
+      // Parse the response
+      final emotionMatch = RegExp(r'EMOTION:\s*(\w+)').firstMatch(responseText);
+      final responseMatch = RegExp(r'RESPONSE:\s*(.+)', dotAll: true).firstMatch(responseText);
+
+      final emotion = emotionMatch?.group(1)?.toLowerCase() ?? 'neutral';
+      final aiResponse = responseMatch?.group(1)?.trim() ?? 
+          'Thank you for sharing. Keep journaling — every entry helps you understand yourself better.';
+
+      // Validate emotion is one of our supported ones
+      final validEmotions = ['joy', 'sadness', 'anger', 'fear', 'surprise', 'disgust', 'neutral'];
+      final finalEmotion = validEmotions.contains(emotion) ? emotion : 'neutral';
+
+      return {'emotion': finalEmotion, 'response': aiResponse};
+    } catch (e) {
+      // Fallback to local detection if API fails
+      return {'emotion': _detectEmotionLocally(text), 'response': _getLocalResponse(_detectEmotionLocally(text))};
+    }
+  }
+
   String _detectEmotionLocally(String text) {
     text = text.toLowerCase();
     if (text.contains(RegExp(r'happy|joy|great|amazing|wonderful|love|excited|good|fantastic|awesome'))) return 'joy';
@@ -43,15 +83,15 @@ class _JournalScreenState extends State<JournalScreen> {
     return 'neutral';
   }
 
-  String _getAiResponse(String emotion) {
+  String _getLocalResponse(String emotion) {
     final responses = {
-      'joy': "That's wonderful! Your positive energy is clearly shining through. Keep embracing these moments of joy — they're worth celebrating! 🌟",
-      'sadness': "It's okay to feel sad sometimes. Your feelings are valid. Remember that difficult moments pass, and brighter days are ahead. I'm here with you. 💙",
-      'anger': "I can sense some frustration in your words. Take a deep breath — it's okay to feel this way. Try channeling this energy into something productive. 🌊",
-      'fear': "Feeling anxious is completely normal. You're stronger than your fears. Take it one step at a time, and remember to breathe. You've got this! 💪",
-      'surprise': "Life is full of unexpected moments! How you respond to surprises defines your resilience. Embrace the unexpected — it often leads to growth. ✨",
-      'disgust': "It sounds like something really bothered you today. Your boundaries and values matter. It's okay to step away from things that don't align with you. 🛡️",
-      'neutral': "Thank you for sharing your thoughts. Journaling regularly helps build self-awareness. Keep writing — every entry is a step towards knowing yourself better. 📖",
+      'joy': "That's wonderful! Your positive energy is clearly shining through. Keep embracing these moments of joy! 🌟",
+      'sadness': "It's okay to feel sad sometimes. Your feelings are valid. Brighter days are ahead. 💙",
+      'anger': "I can sense some frustration. Take a deep breath — it's okay to feel this way. 🌊",
+      'fear': "Feeling anxious is completely normal. You're stronger than your fears. You've got this! 💪",
+      'surprise': "Life is full of unexpected moments! Embrace the unexpected — it often leads to growth. ✨",
+      'disgust': "Something really bothered you today. Your boundaries and values matter. 🛡️",
+      'neutral': "Thank you for sharing. Keep writing — every entry helps you know yourself better. 📖",
     };
     return responses[emotion] ?? responses['neutral']!;
   }
@@ -65,17 +105,21 @@ class _JournalScreenState extends State<JournalScreen> {
       _aiResponse = '';
     });
 
-    // Simulate API delay
-    await Future.delayed(const Duration(seconds: 2));
-
-    final emotion = _detectEmotionLocally(_controller.text);
-    final response = _getAiResponse(emotion);
+    final result = await _analyzeWithGemini(_controller.text);
 
     setState(() {
       _isAnalyzing = false;
-      _detectedEmotion = emotion;
-      _aiResponse = response;
+      _detectedEmotion = result['emotion']!;
+      _aiResponse = result['response']!;
     });
+  }
+
+  String _getFormattedDate() {
+    final now = DateTime.now();
+    final months = ['January','February','March','April','May','June',
+        'July','August','September','October','November','December'];
+    final days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
   }
 
   @override
@@ -112,7 +156,7 @@ class _JournalScreenState extends State<JournalScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Color(0x1AFFFFFF),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.arrow_back_ios_new,
@@ -131,23 +175,18 @@ class _JournalScreenState extends State<JournalScreen> {
                     const Spacer(),
                     Text(
                       '$_wordCount words',
-                      style: const TextStyle(
-                        color: Colors.white38,
-                        fontSize: 13,
-                      ),
+                      style: const TextStyle(color: Colors.white38, fontSize: 13),
                     ),
                   ],
                 ),
               ),
 
-              // Main content
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Date
                       Text(
                         _getFormattedDate(),
                         style: const TextStyle(
@@ -161,11 +200,9 @@ class _JournalScreenState extends State<JournalScreen> {
                       // Text input
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
+                          color: Color(0x0DFFFFFF),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.1),
-                          ),
+                          border: Border.all(color: Color(0x1AFFFFFF)),
                         ),
                         child: TextField(
                           controller: _controller,
@@ -177,12 +214,8 @@ class _JournalScreenState extends State<JournalScreen> {
                             height: 1.6,
                           ),
                           decoration: const InputDecoration(
-                            hintText:
-                                "What's on your mind today? Write freely...",
-                            hintStyle: TextStyle(
-                              color: Colors.white24,
-                              fontSize: 15,
-                            ),
+                            hintText: "What's on your mind today? Write freely...",
+                            hintStyle: TextStyle(color: Colors.white24, fontSize: 15),
                             border: InputBorder.none,
                             contentPadding: EdgeInsets.all(20),
                           ),
@@ -200,16 +233,12 @@ class _JournalScreenState extends State<JournalScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFF5C2D91),
-                                  Color(0xFF007A7A)
-                                ],
+                                colors: [Color(0xFF5C2D91), Color(0xFF007A7A)],
                               ),
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color:
-                                      const Color(0xFF5C2D91).withOpacity(0.4),
+                                  color: Color(0xFF5C2D91),
                                   blurRadius: 12,
                                 ),
                               ],
@@ -225,7 +254,7 @@ class _JournalScreenState extends State<JournalScreen> {
                                       ),
                                     )
                                   : const Text(
-                                      '🔍 Analyse My Mood',
+                                      '🤖 Analyse with AI',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 16,
@@ -244,20 +273,16 @@ class _JournalScreenState extends State<JournalScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: (emotionInfo['color'] as Color)
-                                .withOpacity(0.15),
+                            color: (emotionInfo['color'] as Color).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: (emotionInfo['color'] as Color)
-                                  .withOpacity(0.4),
+                              color: (emotionInfo['color'] as Color).withValues(alpha: 0.4),
                             ),
                           ),
                           child: Column(
                             children: [
-                              Text(
-                                emotionInfo['emoji'] as String,
-                                style: const TextStyle(fontSize: 48),
-                              ),
+                              Text(emotionInfo['emoji'] as String,
+                                  style: const TextStyle(fontSize: 48)),
                               const SizedBox(height: 8),
                               Text(
                                 'Feeling ${emotionInfo['label']}',
@@ -292,15 +317,5 @@ class _JournalScreenState extends State<JournalScreen> {
         ),
       ),
     );
-  }
-
-  String _getFormattedDate() {
-    final now = DateTime.now();
-    final months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
   }
 }
