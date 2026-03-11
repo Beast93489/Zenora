@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'journal_screen.dart';
 
 void main() {
   runApp(const ZenoraApp());
@@ -20,6 +21,7 @@ class ZenoraApp extends StatelessWidget {
     );
   }
 }
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -134,7 +136,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF5C2D91).withOpacity(0.5),
+                            color: Color(0xFF5C2D91),
                             blurRadius: 30,
                             spreadRadius: 5,
                           ),
@@ -202,7 +204,7 @@ class _SplashScreenState extends State<SplashScreen>
                     height: 40,
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        const Color(0xFF5C2D91).withOpacity(0.8),
+                        const Color(0xFF5C2D91),
                       ),
                       strokeWidth: 2,
                     ),
@@ -225,6 +227,7 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -252,7 +255,6 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top bar
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -283,7 +285,6 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    // Streak badge
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 10),
@@ -292,12 +293,6 @@ class HomeScreen extends StatelessWidget {
                           colors: [Color(0xFF5C2D91), Color(0xFF007A7A)],
                         ),
                         borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF5C2D91).withOpacity(0.4),
-                            blurRadius: 12,
-                          ),
-                        ],
                       ),
                       child: const Row(
                         children: [
@@ -316,19 +311,14 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 28),
-
-                // Mood card
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: Color(0x0DFFFFFF),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
-                    ),
+                    border: Border.all(color: Color(0x1AFFFFFF)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,7 +346,7 @@ class HomeScreen extends StatelessWidget {
                                 child: Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.07),
+                                    color: Color(0x12FFFFFF),
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Text(
@@ -371,10 +361,7 @@ class HomeScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                // Expression modes
                 const Text(
                   'Express Yourself',
                   style: TextStyle(
@@ -392,7 +379,16 @@ class HomeScreen extends StatelessWidget {
                   mainAxisSpacing: 12,
                   childAspectRatio: 1.4,
                   children: [
-                    _ModeCard(emoji: '✍️', title: 'Journal', color: const Color(0xFF5C2D91)),
+                    _ModeCard(
+                      emoji: '✍️',
+                      title: 'Journal',
+                      color: const Color(0xFF5C2D91),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const JournalScreen()),
+                      ),
+                    ),
                     _ModeCard(emoji: '🎤', title: 'Voice', color: const Color(0xFF007A7A)),
                     _ModeCard(emoji: '😊', title: 'Emoji Board', color: const Color(0xFF2D5C91)),
                     _ModeCard(emoji: '🎵', title: 'Music Mood', color: const Color(0xFF7A4A00)),
@@ -402,16 +398,13 @@ class HomeScreen extends StatelessWidget {
                     _ModeCard(emoji: '🃏', title: 'Scenarios', color: const Color(0xFF1A4A7A)),
                   ],
                 ),
-
                 const SizedBox(height: 20),
-
-                // Zeno points
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: Color(0x0DFFFFFF),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    border: Border.all(color: Color(0x1AFFFFFF)),
                   ),
                   child: Row(
                     children: [
@@ -432,11 +425,11 @@ class HomeScreen extends StatelessWidget {
                             const SizedBox(height: 6),
                             ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                              child: LinearProgressIndicator(
+                              child: const LinearProgressIndicator(
                                 value: 0.1,
                                 minHeight: 8,
                                 backgroundColor: Colors.white12,
-                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                valueColor: AlwaysStoppedAnimation<Color>(
                                   Color(0xFF9B59F5),
                                 ),
                               ),
@@ -456,7 +449,6 @@ class HomeScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 20),
               ],
             ),
@@ -467,10 +459,7 @@ class HomeScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF1A0533),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 10,
-            ),
+            BoxShadow(color: Colors.black54, blurRadius: 10),
           ],
         ),
         child: BottomNavigationBar(
@@ -499,22 +488,24 @@ class _ModeCard extends StatelessWidget {
   final String emoji;
   final String title;
   final Color color;
+  final VoidCallback? onTap;
 
   const _ModeCard({
     required this.emoji,
     required this.title,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onTap ?? () {},
       child: Container(
         decoration: BoxDecoration(
-          color: color.withOpacity(0.3),
+          color: color.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: color.withOpacity(0.5)),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
