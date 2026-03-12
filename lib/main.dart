@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'journal_screen.dart';
 import 'mood_history_screen.dart';
 import 'emoji_board_screen.dart';
+import 'vibe_slider_screen.dart';
 
 void main() {
   runApp(const ZenoraApp());
@@ -404,7 +405,15 @@ class HomeScreen extends StatelessWidget {
                     _ModeCard(emoji: '🎵', title: 'Music Mood', color: const Color(0xFF7A4A00)),
                     _ModeCard(emoji: '🎨', title: 'Mood Canvas', color: const Color(0xFF1A7A4A)),
                     _ModeCard(emoji: '🌤️', title: 'Weather', color: const Color(0xFF7A1A4A)),
-                    _ModeCard(emoji: '⚡', title: 'Vibe Slider', color: const Color(0xFF4A1A7A)),
+                    _ModeCard(
+  emoji: '⚡',
+  title: 'Vibe Slider',
+  color: const Color(0xFF2D915C),
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const VibeSliderScreen()),
+  ),
+),
                     _ModeCard(emoji: '🃏', title: 'Scenarios', color: const Color(0xFF1A4A7A)),
                   ],
                 ),
