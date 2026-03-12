@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'journal_screen.dart';
 import 'mood_history_screen.dart';
+import 'emoji_board_screen.dart';
 
 void main() {
   runApp(const ZenoraApp());
@@ -391,7 +392,15 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     _ModeCard(emoji: '🎤', title: 'Voice', color: const Color(0xFF007A7A)),
-                    _ModeCard(emoji: '😊', title: 'Emoji Board', color: const Color(0xFF2D5C91)),
+                    _ModeCard(
+  emoji: '😊',
+  title: 'Emoji Board',
+  color: const Color(0xFF2D5C91),
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const EmojiBoardScreen()),
+  ),
+),
                     _ModeCard(emoji: '🎵', title: 'Music Mood', color: const Color(0xFF7A4A00)),
                     _ModeCard(emoji: '🎨', title: 'Mood Canvas', color: const Color(0xFF1A7A4A)),
                     _ModeCard(emoji: '🌤️', title: 'Weather', color: const Color(0xFF7A1A4A)),
