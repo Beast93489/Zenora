@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'journal_screen.dart';
+import 'mood_history_screen.dart';
 
 void main() {
   runApp(const ZenoraApp());
@@ -463,12 +464,20 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         child: BottomNavigationBar(
-          backgroundColor: Colors.transparent,
-          selectedItemColor: const Color(0xFF9B59F5),
-          unselectedItemColor: Colors.white38,
-          type: BottomNavigationBarType.fixed,
-          elevation: 0,
-          items: const [
+  backgroundColor: Colors.transparent,
+  selectedItemColor: const Color(0xFF9B59F5),
+  unselectedItemColor: Colors.white38,
+  type: BottomNavigationBarType.fixed,
+  elevation: 0,
+  onTap: (index) {
+    if (index == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MoodHistoryScreen()),
+      );
+    }
+  },
+  items: const [
             BottomNavigationBarItem(
                 icon: Icon(Icons.home_rounded), label: 'Home'),
             BottomNavigationBarItem(
