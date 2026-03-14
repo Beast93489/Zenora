@@ -3,6 +3,7 @@ import 'journal_screen.dart';
 import 'mood_history_screen.dart';
 import 'emoji_board_screen.dart';
 import 'vibe_slider_screen.dart';
+import 'profile_screen.dart';
 
 void main() {
   runApp(const ZenoraApp());
@@ -488,13 +489,18 @@ class HomeScreen extends StatelessWidget {
   type: BottomNavigationBarType.fixed,
   elevation: 0,
   onTap: (index) {
-    if (index == 2) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const MoodHistoryScreen()),
-      );
-    }
-  },
+  if (index == 2) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MoodHistoryScreen()),
+    );
+  } else if (index == 3) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+  }
+},
   items: const [
             BottomNavigationBarItem(
                 icon: Icon(Icons.home_rounded), label: 'Home'),
