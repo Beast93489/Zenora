@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "211905121598",
+    "project_id": "zenora-99e7f",
+    "storage_bucket": "zenora-99e7f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:211905121598:android:0a397694e90e0063dab06f",
+        "android_client_info": {
+          "package_name": "com.example.zenora2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAexp9vmZcRKzVt70tmJ8AhlQOp1h9i2fw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

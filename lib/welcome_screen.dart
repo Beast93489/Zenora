@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'firebase_service.dart';
 
 // ── Welcome / Onboarding Screen ──────────────────────────────────
 class WelcomeScreen extends StatefulWidget {
@@ -303,17 +304,37 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
     setState(() => _loading = true);
-    // Simulate loading — replace with FirebaseAuth later
-    await Future.delayed(const Duration(milliseconds: 1500));
+    Map<String, dynamic> result;
+    if (_isLogin) {
+      result = await FirebaseService.signIn(
+        email: _emailCtrl.text,
+        password: _passCtrl.text,
+      );
+    } else {
+      result = await FirebaseService.signUp(
+        email: _emailCtrl.text,
+        password: _passCtrl.text,
+        name: _nameCtrl.text,
+      );
+    }
     if (!mounted) return;
     setState(() => _loading = false);
-    // TODO: Replace with FirebaseAuth.instance.signInWithEmailAndPassword()
-    // For now navigate directly to home
-    Navigator.pushReplacementNamed(context, '/home');
+    if (result['success']) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      _snack(result['error']);
+    }
   }
-
-  void _continueAsGuest() {
-    Navigator.pushReplacementNamed(context, '/home');
+  void _continueAsGuest() async {
+    setState(() => _loading = true);
+    final result = await FirebaseService.signInAsGuest();
+    if (!mounted) return;
+    setState(() => _loading = false);
+    if (result['success']) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      _snack(result['error']);
+    }
   }
 
   void _snack(String msg) {
