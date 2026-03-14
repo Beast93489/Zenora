@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'firebase_service.dart';
 
 class WeatherMetaphorScreen extends StatefulWidget {
   const WeatherMetaphorScreen({super.key});
@@ -174,6 +175,16 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
     HapticFeedback.mediumImpact();
     setState(() => _submitted = true);
     _resultController.forward();
+    final sel = _selected!;
+    FirebaseService.saveMoodEntry(
+      mode: 'weather',
+      emotion: sel['emotion'] as String,
+      emotionLabel: sel['emotionLabel'] as String,
+      emoji: sel['emoji'] as String,
+      points: 5,
+      preview: 'Weather: ${sel['label']}',
+    );
+    FirebaseService.checkAndAwardBadges();
   }
 
   void _reset() {

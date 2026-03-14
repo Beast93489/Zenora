@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'firebase_service.dart';
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
@@ -112,8 +113,20 @@ Journal entry: "$text"
       _detectedEmotion = result['emotion']!;
       _aiResponse = result['response']!;
     });
+    final emotion = result['emotion']!;
+    final emotionInfo = _emotionData[emotion] ?? _emotionData['neutral']!;
+    FirebaseService.saveMoodEntry(
+      mode: 'journal',
+      emotion: emotion,
+      emotionLabel: emotionInfo['label'] as String,
+      emoji: emotionInfo['emoji'] as String,
+      points: 10,
+      preview: _controller.text.length > 60
+          ? '${_controller.text.substring(0, 60)}...'
+          : _controller.text,
+    );
+    FirebaseService.checkAndAwardBadges();
   }
-
   String _getFormattedDate() {
     final now = DateTime.now();
     final months = ['January','February','March','April','May','June',

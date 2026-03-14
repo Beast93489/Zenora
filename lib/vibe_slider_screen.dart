@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'firebase_service.dart';
 
 class VibeSliderScreen extends StatefulWidget {
   const VibeSliderScreen({super.key});
@@ -147,6 +148,15 @@ class _VibeSliderScreenState extends State<VibeSliderScreen>
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
     _resultController.forward();
+    FirebaseService.saveMoodEntry(
+      mode: 'vibe_slider',
+      emotion: _currentVibe['emotion']?.toString() ?? 'neutral',
+      emotionLabel: _currentVibe['label']?.toString() ?? 'Neutral',
+      emoji: _currentVibe['emoji']?.toString() ?? '😐',
+      points: 5,
+      preview: 'Vibe: ${_currentVibe['label']}',
+    );
+    FirebaseService.checkAndAwardBadges();
     if (!mounted) return;
     setState(() => _isAnimating = false);
   }

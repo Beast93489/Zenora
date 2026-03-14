@@ -8,6 +8,7 @@ import 'weather_metaphor_screen.dart';
 import 'welcome_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +27,7 @@ class ZenoraApp extends StatelessWidget {
   title: 'Zenora',
   debugShowCheckedModeBanner: false,
   theme: ThemeData(fontFamily: 'sans-serif'),
-  initialRoute: '/welcome',
+  home: const AuthWrapper(),
   routes: {
     '/welcome': (_) => const WelcomeScreen(),
     '/login':   (_) => const LoginScreen(),
@@ -574,6 +575,34 @@ class _ModeCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Still loading
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF0F0F1E),
+            body: Center(
+              child: CircularProgressIndicator(color: Color(0xFF9B59F5)),
+            ),
+          );
+        }
+        // Already logged in → go straight to Home
+        if (snapshot.hasData) {
+          return const HomeScreen();
+        }
+        // Not logged in → show Welcome
+        return const WelcomeScreen();
+      },
     );
   }
 }
