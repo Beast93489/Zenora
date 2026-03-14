@@ -9,6 +9,7 @@ import 'welcome_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'scenario_cards_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -434,7 +435,15 @@ class HomeScreen extends StatelessWidget {
     MaterialPageRoute(builder: (_) => const VibeSliderScreen()),
   ),
 ),
-                    _ModeCard(emoji: '🃏', title: 'Scenarios', color: const Color(0xFF1A4A7A)),
+                    _ModeCard(
+  emoji: '🃏',
+  title: 'Scenarios',
+  color: const Color(0xFF1A4A7A),
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const ScenarioCardsScreen()),
+  ),
+),
                   ],
                 ),
                 const SizedBox(height: 20),

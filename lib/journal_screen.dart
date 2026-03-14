@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
 import 'firebase_service.dart';
+import 'dart:convert';
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
@@ -17,7 +18,7 @@ class _JournalScreenState extends State<JournalScreen> {
   int _wordCount = 0;
 
   // Replace with your actual Gemini API key
-  static const String _apiKey = 'AIzaSyBiHhDSJJWJULQZvxv_pyWoqv0Sv4Kz64w';
+  static const String _apiKey = 'AIzaSyCe_Rv4afdSwm2GYzWf31jcz_RMYUaOzFc';
 
   final Map<String, Map<String, dynamic>> _emotionData = {
     'joy':      {'emoji': '😊', 'color': Color(0xFFFFB800), 'label': 'Joyful'},
@@ -38,38 +39,50 @@ class _JournalScreenState extends State<JournalScreen> {
 
   Future<Map<String, String>> _analyzeWithGemini(String text) async {
     try {
-      final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
-        apiKey: _apiKey,
-      );
-
-      final prompt = '''
-Analyze the emotion in this journal entry and respond in exactly this format:
+      final response = await http.post(
+       Uri.parse(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=$_apiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [
+            {
+              'parts': [
+                {
+                  'text': '''Analyze the emotion in this journal entry and respond in exactly this format:
 EMOTION: [one of: joy, sadness, anger, fear, surprise, disgust, neutral]
 RESPONSE: [a warm, empathetic 2-3 sentence response to the person]
 
-Journal entry: "$text"
-''';
+Journal entry: "$text"'''
+                }
+              ]
+            }
+          ]
+        }),
+      );
 
-      final response = await model.generateContent([Content.text(prompt)]);
-      final responseText = response.text ?? '';
-
-      // Parse the response
-      final emotionMatch = RegExp(r'EMOTION:\s*(\w+)').firstMatch(responseText);
-      final responseMatch = RegExp(r'RESPONSE:\s*(.+)', dotAll: true).firstMatch(responseText);
-
-      final emotion = emotionMatch?.group(1)?.toLowerCase() ?? 'neutral';
-      final aiResponse = responseMatch?.group(1)?.trim() ?? 
-          'Thank you for sharing. Keep journaling — every entry helps you understand yourself better.';
-
-      // Validate emotion is one of our supported ones
-      final validEmotions = ['joy', 'sadness', 'anger', 'fear', 'surprise', 'disgust', 'neutral'];
-      final finalEmotion = validEmotions.contains(emotion) ? emotion : 'neutral';
-
-      return {'emotion': finalEmotion, 'response': aiResponse};
+      final data = jsonDecode(response.body);
+      final responseText =
+          data['candidates'][0]['content']['parts'][0]['text'] as String;
+      final lines = responseText.split('\n');
+      String emotion = 'neutral';
+      String aiResponse = '';
+      for (final line in lines) {
+        if (line.startsWith('EMOTION:')) {
+          emotion = line.replaceFirst('EMOTION:', '').trim().toLowerCase();
+        } else if (line.startsWith('RESPONSE:')) {
+          aiResponse = line.replaceFirst('RESPONSE:', '').trim();
+        }
+      }
+      if (!['joy','sadness','anger','fear','surprise','disgust','neutral']
+          .contains(emotion)) {
+        emotion = 'neutral';
+      }
+      if (aiResponse.isEmpty) aiResponse = _getLocalResponse(emotion);
+      return {'emotion': emotion, 'response': aiResponse};
     } catch (e) {
-      // Fallback to local detection if API fails
-      return {'emotion': _detectEmotionLocally(text), 'response': _getLocalResponse(_detectEmotionLocally(text))};
+      debugPrint('Journal Gemini error: $e');
+      final emotion = _detectEmotionLocally(text);
+      return {'emotion': emotion, 'response': _getLocalResponse(emotion)};
     }
   }
 
