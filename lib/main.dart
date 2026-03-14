@@ -5,6 +5,7 @@ import 'emoji_board_screen.dart';
 import 'vibe_slider_screen.dart';
 import 'profile_screen.dart';
 import 'weather_metaphor_screen.dart';
+import 'welcome_screen.dart';
 
 void main() {
   runApp(const ZenoraApp());
@@ -16,13 +17,15 @@ class ZenoraApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Zenora',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Arial',
-        scaffoldBackgroundColor: const Color(0xFF0F0F1E),
-      ),
-      home: const SplashScreen(),
+  title: 'Zenora',
+  debugShowCheckedModeBanner: false,
+  theme: ThemeData(fontFamily: 'sans-serif'),
+  initialRoute: '/welcome',
+  routes: {
+    '/welcome': (_) => const WelcomeScreen(),
+    '/login':   (_) => const LoginScreen(),
+    '/home':    (_) => const HomeScreen(),
+  },
     );
   }
 }
