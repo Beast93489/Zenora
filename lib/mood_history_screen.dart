@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'firebase_service.dart';
 
 class MoodHistoryScreen extends StatefulWidget {
   const MoodHistoryScreen({super.key});
@@ -13,93 +14,8 @@ class _MoodHistoryScreenState extends State<MoodHistoryScreen>
   int _selectedFilter = 0;
   final List<String> _filters = ['All', 'Week', 'Month'];
 
-  // Sample mood data — will be replaced with real Firebase data later
-  final List<Map<String, dynamic>> _moodEntries = [
-    {
-      'date': 'Today, Mar 13',
-      'time': '11:42 PM',
-      'mode': 'Journal',
-      'modeIcon': '✍️',
-      'emotion': 'joy',
-      'emoji': '😊',
-      'label': 'Joyful',
-      'color': Color(0xFFFFB800),
-      'preview': 'Today was absolutely incredible, got great news about...',
-      'points': 10,
-    },
-    {
-      'date': 'Today, Mar 13',
-      'time': '3:15 PM',
-      'mode': 'Emoji Board',
-      'modeIcon': '😊',
-      'emotion': 'neutral',
-      'emoji': '😐',
-      'label': 'Neutral',
-      'color': Color(0xFF95A5A6),
-      'preview': 'Quick mood check-in',
-      'points': 5,
-    },
-    {
-      'date': 'Yesterday, Mar 12',
-      'time': '10:30 PM',
-      'mode': 'Journal',
-      'modeIcon': '✍️',
-      'emotion': 'fear',
-      'emoji': '😰',
-      'label': 'Anxious',
-      'color': Color(0xFF9B59B6),
-      'preview': 'Feeling really stressed about my exams lately...',
-      'points': 10,
-    },
-    {
-      'date': 'Yesterday, Mar 12',
-      'time': '2:00 PM',
-      'mode': 'Vibe Slider',
-      'modeIcon': '⚡',
-      'emotion': 'sadness',
-      'emoji': '😔',
-      'label': 'Sad',
-      'color': Color(0xFF4A90D9),
-      'preview': 'Mood slider check-in',
-      'points': 5,
-    },
-    {
-      'date': 'Mar 11',
-      'time': '9:00 PM',
-      'mode': 'Journal',
-      'modeIcon': '✍️',
-      'emotion': 'joy',
-      'emoji': '😊',
-      'label': 'Joyful',
-      'color': Color(0xFFFFB800),
-      'preview': 'Had a great day with friends, went to...',
-      'points': 10,
-    },
-    {
-      'date': 'Mar 11',
-      'time': '11:00 AM',
-      'mode': 'Voice',
-      'modeIcon': '🎤',
-      'emotion': 'anger',
-      'emoji': '😤',
-      'label': 'Angry',
-      'color': Color(0xFFE74C3C),
-      'preview': 'Voice rant recorded — 1:23 min',
-      'points': 10,
-    },
-    {
-      'date': 'Mar 10',
-      'time': '8:45 PM',
-      'mode': 'Journal',
-      'modeIcon': '✍️',
-      'emotion': 'neutral',
-      'emoji': '😐',
-      'label': 'Neutral',
-      'color': Color(0xFF95A5A6),
-      'preview': 'Just a regular day, nothing much happened...',
-      'points': 10,
-    },
-  ];
+  List<Map<String, dynamic>> _moodEntries = [];
+  bool _loading = true;
 
   // Emotion counts for summary
   Map<String, int> get _emotionCounts {
@@ -121,6 +37,77 @@ class _MoodHistoryScreenState extends State<MoodHistoryScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadEntries();
+  }
+
+  Future<void> _loadEntries() async {
+    final entries = await FirebaseService.getMoodEntries();
+    if (!mounted) return;
+    setState(() {
+      _moodEntries = entries.map((e) {
+        final emotion = e['emotion'] as String? ?? 'neutral';
+        final colorMap = {
+          'joy':      Color(0xFFFFB800),
+          'sadness':  Color(0xFF4A90D9),
+          'anger':    Color(0xFFE74C3C),
+          'fear':     Color(0xFF9B59B6),
+          'surprise': Color(0xFF00B4B4),
+          'disgust':  Color(0xFF27AE60),
+          'neutral':  Color(0xFF95A5A6),
+        };
+        final ts = e['timestamp'];
+        String dateStr = 'Today';
+        String timeStr = '';
+        if (ts != null) {
+          final dt = (ts as dynamic).toDate() as DateTime;
+          final now = DateTime.now();
+          final diff = now.difference(dt).inDays;
+          if (diff == 0) dateStr = 'Today';
+          else if (diff == 1) dateStr = 'Yesterday';
+          else dateStr = '${dt.day} ${_monthName(dt.month)}';
+          timeStr = '${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}';
+        }
+        return {
+          'date': dateStr,
+          'time': timeStr,
+          'mode': _modeName(e['mode'] as String? ?? 'journal'),
+          'modeIcon': _modeIcon(e['mode'] as String? ?? 'journal'),
+          'emotion': emotion,
+          'emoji': e['emoji'] as String? ?? '😐',
+          'label': e['emotionLabel'] as String? ?? 'Neutral',
+          'color': colorMap[emotion] ?? Color(0xFF95A5A6),
+          'preview': e['preview'] as String? ?? '',
+          'points': e['points'] as int? ?? 5,
+        };
+      }).toList();
+      _loading = false;
+    });
+  }
+
+  String _monthName(int m) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[m - 1];
+  }
+
+  String _modeName(String mode) {
+    const names = {
+      'journal':     'Journal',
+      'emoji_board': 'Emoji Board',
+      'vibe_slider': 'Vibe Slider',
+      'weather':     'Weather',
+    };
+    return names[mode] ?? 'Journal';
+  }
+
+  String _modeIcon(String mode) {
+    const icons = {
+      'journal':     '✍️',
+      'emoji_board': '😊',
+      'vibe_slider': '⚡',
+      'weather':     '🌤️',
+    };
+    return icons[mode] ?? '✍️';
   }
 
   @override
@@ -219,6 +206,28 @@ class _MoodHistoryScreenState extends State<MoodHistoryScreen>
   }
 
   Widget _buildTimeline() {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF9B59F5)),
+      );
+    }
+    if (_moodEntries.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('😊', style: TextStyle(fontSize: 48)),
+            SizedBox(height: 12),
+            Text('No entries yet!',
+                style: TextStyle(color: Colors.white, fontSize: 18,
+                    fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Text('Start logging your mood to see history here',
+                style: TextStyle(color: Colors.white38, fontSize: 13)),
+          ],
+        ),
+      );
+    }
     return Column(
       children: [
         // Filter chips
