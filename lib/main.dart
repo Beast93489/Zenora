@@ -4,6 +4,7 @@ import 'mood_history_screen.dart';
 import 'emoji_board_screen.dart';
 import 'vibe_slider_screen.dart';
 import 'profile_screen.dart';
+import 'weather_metaphor_screen.dart';
 
 void main() {
   runApp(const ZenoraApp());
@@ -405,7 +406,15 @@ class HomeScreen extends StatelessWidget {
 ),
                     _ModeCard(emoji: '🎵', title: 'Music Mood', color: const Color(0xFF7A4A00)),
                     _ModeCard(emoji: '🎨', title: 'Mood Canvas', color: const Color(0xFF1A7A4A)),
-                    _ModeCard(emoji: '🌤️', title: 'Weather', color: const Color(0xFF7A1A4A)),
+                    _ModeCard(
+  emoji: '🌤️',
+  title: 'Weather Metaphor',
+  color: const Color(0xFF2D6091),
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const WeatherMetaphorScreen()),
+  ),
+),
                     _ModeCard(
   emoji: '⚡',
   title: 'Vibe Slider',
