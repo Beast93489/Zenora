@@ -244,7 +244,9 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatelessWidget {// Run once to fill cache with 20 scenario sets
+// Remove after running!
+
   const HomeScreen({super.key});
 
   String _getGreeting() {
