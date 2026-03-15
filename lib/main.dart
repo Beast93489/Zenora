@@ -13,6 +13,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'scenario_cards_screen.dart';
 import 'music_mood_screen.dart';
 import 'firebase_service.dart';
+import 'mood_canvas_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -264,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen>
     {
       'emoji': '🎨', 'title': 'Mood Canvas', 'subtitle': 'paint ur soul',
       'colors': [Color(0xFFFF69B4), Color(0xFF9B59B6)],
-      'screen': null,
+      'screen': 'canvas'
     },
     {
       'emoji': '🌤️', 'title': 'Weather', 'subtitle': 'what\'s ur forecast',
@@ -378,6 +379,7 @@ class _HomeScreenState extends State<HomeScreen>
       case 'weather':  page = const WeatherMetaphorScreen(); break;
       case 'vibe':     page = const VibeSliderScreen(); break;
       case 'scenario': page = const ScenarioCardsScreen(); break;
+      case 'canvas':   page = const MoodCanvasScreen(); break;
     }
     if (page != null) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => page!));
