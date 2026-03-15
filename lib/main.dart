@@ -14,6 +14,7 @@ import 'scenario_cards_screen.dart';
 import 'music_mood_screen.dart';
 import 'firebase_service.dart';
 import 'mood_canvas_screen.dart';
+import 'voice_mode_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -250,7 +251,7 @@ class _HomeScreenState extends State<HomeScreen>
     {
       'emoji': '🎤', 'title': 'Voice', 'subtitle': 'bol daal yaar',
       'colors': [Color(0xFF007A7A), Color(0xFF00D4FF)],
-      'screen': null,
+      'screen': 'voice',
     },
     {
       'emoji': '😊', 'title': 'Emoji Board', 'subtitle': 'pick ur vibe',
@@ -380,6 +381,7 @@ class _HomeScreenState extends State<HomeScreen>
       case 'vibe':     page = const VibeSliderScreen(); break;
       case 'scenario': page = const ScenarioCardsScreen(); break;
       case 'canvas':   page = const MoodCanvasScreen(); break;
+      case 'voice':    page = const VoiceModeScreen(); break;
     }
     if (page != null) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => page!));
