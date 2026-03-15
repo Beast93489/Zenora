@@ -15,12 +15,37 @@ import 'music_mood_screen.dart';
 import 'firebase_service.dart';
 import 'mood_canvas_screen.dart';
 import 'voice_mode_screen.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // ── Firebase Messaging setup ──────────────────────────────
+  final messaging = FirebaseMessaging.instance;
+  
+  // Request permission
+  await messaging.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+  
+  // Get FCM token and save to Firestore
+  final token = await messaging.getToken();
+  if (token != null) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'fcmToken': token});
+    }
+  }
+  
   runApp(const ZenoraApp());
 }
 

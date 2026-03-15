@@ -67,7 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   final List<Map<String, dynamic>> _allBadges = [
     {'id': 'first_entry',     'icon': '🌱', 'title': 'Baby Steps',      'desc': 'logged first mood',          'genZ': 'origin story unlocked',         'color': Color(0xFF27AE60), 'earned': false},
     {'id': 'streak_3',        'icon': '🔥', 'title': '3-Day Streak',    'desc': 'consistent king/queen',      'genZ': '3 days? okay we\'re doing this','color': Color(0xFFFF6B35), 'earned': false},
-    {'id': 'streak_7',        'icon': '⚡', 'title': 'Week Warrior',    'desc': '7 days no cap',              'genZ': 'slay consistently bestie',      'color': Color(0xFFFFB800), 'earned': false},
+    {'id': 'streak_7',        'icon': '⚡', 'title': 'Week Warrior',    'desc': '7 days no cap',              'genZ': 'slay consistently bhai',      'color': Color(0xFFFFB800), 'earned': false},
     {'id': 'vibe_master',     'icon': '🎵', 'title': 'Vibe Master',     'desc': 'vibe slider addict fr',      'genZ': 'no thoughts just vibes',        'color': Color(0xFF9B59F5), 'earned': false},
     {'id': 'journaler',       'icon': '✍️', 'title': 'Main Character',  'desc': '10 journal entries',         'genZ': 'writing their origin story',    'color': Color(0xFFE91E8C), 'earned': false},
     {'id': 'emotion_explorer','icon': '🎭', 'title': 'Emotion Otaku',   'desc': 'felt all 7 emotions',        'genZ': 'full spectrum unlocked',        'color': Color(0xFF00B4B4), 'earned': false},
@@ -292,7 +292,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         _divider(),
         _toggleTile('Weekly Insights', 'your weekly mood report every Sunday', _notifInsights, (v) { setState(() => _notifInsights = v); setLocal(() {}); }),
         _divider(),
-        _toggleTile('Streak Alerts', 'don\'t let the streak die bestie 🔥', _notifStreak, (v) { setState(() => _notifStreak = v); setLocal(() {}); }),
+        _toggleTile('Streak Alerts', 'don\'t let the streak die Snapchat ki toh ni todte tum 🔥', _notifStreak, (v) { setState(() => _notifStreak = v); setLocal(() {}); }),
         const SizedBox(height: 20),
         _gradBtn('Save Preferences 🔔', () { Navigator.pop(ctx); _snack('Notification prefs saved! ✅'); }),
       ]))));
@@ -418,7 +418,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       backgroundColor: const Color(0xFF1A0533),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: const Text('Sign Out 👋', style: TextStyle(color: Colors.white)),
-      content: const Text('Your data is safely stored.\nCome back whenever bestie! 🫶', style: TextStyle(color: Colors.white70, height: 1.5)),
+      content: const Text('Your data is safely stored.\nCome back whenever (Aajaiyo)! 🫶', style: TextStyle(color: Colors.white70, height: 1.5)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Stay 😌', style: TextStyle(color: Colors.white54))),
         ElevatedButton(
@@ -682,7 +682,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               onTap: () { HapticFeedback.selectionClick(); _onSettingTap(s['label'] as String); },
               leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: (s['color'] as Color).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)), child: Icon(s['icon'] as IconData, color: s['color'] as Color, size: 20)),
               title: Text(s['label'] as String, style: TextStyle(color: isSignOut ? const Color(0xFFE74C3C) : Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
-              subtitle: isSignOut ? const Text('see you soon bestie 👋', style: TextStyle(color: Colors.white24, fontSize: 10)) : null,
+              subtitle: isSignOut ? const Text('see you soon (Vaps login krle bhai) 👋', style: TextStyle(color: Colors.white24, fontSize: 10)) : null,
               trailing: const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
             ),
             if (!isLast) Divider(color: Colors.white.withValues(alpha: 0.05), height: 1, indent: 16, endIndent: 16),

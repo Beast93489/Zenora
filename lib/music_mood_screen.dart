@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
 import 'firebase_service.dart';
 import 'dart:convert';
+import 'config.dart';
 
 class MusicMoodScreen extends StatefulWidget {
   const MusicMoodScreen({super.key});
@@ -26,11 +27,10 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
   late AnimationController _resultController;
   late Animation<double> _resultAnimation;
 
-  static const String _clientId = '6a641d5f715d4e5e9de3f2faf6f7973d';
-  static const String _clientSecret = '552ba2407f4d447aa5ffa3f69ba9f0ff';
-  static const String _geminiKey = 'AIzaSyCe_Rv4afdSwm2GYzWf31jcz_RMYUaOzFc';
-  static const String _geminiUrl =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=';
+  static const String _clientId = AppConfig.spotifyClientId;
+  static const String _clientSecret = AppConfig.spotifyClientSecret;
+  static const String _groqKey = AppConfig.groqKey;
+  static const String _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
   // Mood-based recommendations shown on empty screen
   final List<Map<String, dynamic>> _moodPlaylists = [
@@ -202,32 +202,22 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
     _resultController.reset();
     try {
       final response = await http.post(
-        Uri.parse('$_geminiUrl$_geminiKey'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse(_groqUrl),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $_groqKey'},
         body: jsonEncode({
-          'contents': [
-            {
-              'parts': [
-                {
-                  'text':
-                      'Analyze the emotional vibe of this song for a mental wellness app.\n\n'
-                      'Song: "${song['name']}"\nArtist: ${song['artist']}\nAlbum: ${song['album']}\n\n'
-                      'Respond EXACTLY in this format:\n'
-                      'EMOTION: [one of: joy, sadness, anger, fear, surprise, neutral, hype, romantic]\n'
-                      'RESPONSE: [2-3 sentences about what this song choice says about the user\'s current mood. '
-                      'Be warm, Gen Z friendly, casual. Use words like "bestie", "fr", "era", "vibes", "lowkey"]\n\n'
-                      'Valid emotions: joy, sadness, anger, fear, surprise, neutral, hype, romantic'
-                }
-              ]
-            }
-          ]
+          'model': 'llama-3.1-8b-instant',
+          'messages': [
+            {'role': 'system', 'content': 'You are a music emotion analyst for a wellness app.'},
+            {'role': 'user', 'content': 'Analyze the emotional vibe of this song.\n\nSong: "${song['name']}"\nArtist: ${song['artist']}\n\nRespond EXACTLY:\nEMOTION: [one of: joy, sadness, anger, fear, surprise, neutral, hype, romantic]\nRESPONSE: [2-3 sentences, Gen Z friendly, warm]'}
+          ],
+          'max_tokens': 200,
+          'temperature': 0.7,
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final text =
-            data['candidates'][0]['content']['parts'][0]['text'] as String;
+        final text = data['choices'][0]['message']['content'] as String;
         String emotion = 'neutral';
         String aiResponse = '';
         for (final line in text.split('\n')) {
@@ -290,7 +280,7 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
 
   String _getFallbackResponse(String emotion, String songName) {
     final responses = {
-      'joy':      'Okay bestie, "$songName" energy is giving main character vibes fr fr ✨ You\'re clearly in your happy era!',
+      'joy':      'Yeh Bhi theek hai , "$songName" energy is giving main character vibes fr fr ✨ You\'re clearly in your happy era!',
       'sadness':  'Ah, "$songName" hours... We see you 💙 It\'s okay to sit in your feels. You\'re not alone.',
       'anger':    '"$songName" when you\'re in your villain arc? Iconic. Channel that energy! 🔥',
       'fear':     'Listening to "$songName" when the anxiety hits different 😰 Take a breath — you\'ve got this.',

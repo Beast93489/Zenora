@@ -463,7 +463,7 @@ class _LoginScreenState extends State<LoginScreen>
                   position: _slideAnim,
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(
-                      _isLogin ? 'Welcome back bestie 👋' : 'Join the wellness era ✨',
+                      _isLogin ? 'Welcome back baawe 👋' : 'Join the wellness era ✨',
                       style: const TextStyle(color: Colors.white, fontSize: 22,
                           fontWeight: FontWeight.bold),
                     ),
