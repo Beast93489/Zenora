@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class FirebaseService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -58,8 +59,8 @@ class FirebaseService {
       return {'success': false, 'error': 'Something went wrong. Try again.'};
     }
   }
-
   static Future<void> signOut() async {
+    try { await _googleSignIn.signOut(); } catch (_) {}
     await _auth.signOut();
   }
 
@@ -81,6 +82,38 @@ class FirebaseService {
       return {'success': true, 'user': cred.user};
     } catch (e) {
       return {'success': false, 'error': 'Guest sign-in failed.'};
+    }
+  }
+  // ── Google Sign-In ────────────────────────────────────────────
+  static final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  static Future<Map<String, dynamic>> signInWithGoogle() async {
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return {'success': false, 'error': 'Cancelled'};
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final userCred = await _auth.signInWithCredential(credential);
+      final user = userCred.user!;
+      final isNew = userCred.additionalUserInfo?.isNewUser ?? false;
+      if (isNew) {
+        await _db.collection('users').doc(user.uid).set({
+          'name': user.displayName ?? 'Zenora User',
+          'email': user.email ?? '',
+          'username': (user.displayName ?? 'user').toLowerCase().replaceAll(' ', ''),
+          'university': 'Chandigarh University',
+          'joinedAt': FieldValue.serverTimestamp(),
+          'zenoPoints': 0, 'streak': 0,
+          'lastEntryDate': null, 'totalEntries': 0,
+          'badges': [], 'photoUrl': user.photoURL ?? '',
+        });
+      }
+      return {'success': true, 'isNew': isNew};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
     }
   }
 
@@ -227,16 +260,21 @@ class FirebaseService {
 
     final toAward = <String>[];
 
-    if (totalEntries >= 1  && !earnedBadges.contains('first_entry'))
+    if (totalEntries >= 1  && !earnedBadges.contains('first_entry')) {
       toAward.add('first_entry');
-    if (streak >= 3        && !earnedBadges.contains('streak_3'))
+    }
+    if (streak >= 3        && !earnedBadges.contains('streak_3')) {
       toAward.add('streak_3');
-    if (streak >= 7        && !earnedBadges.contains('streak_7'))
+    }
+    if (streak >= 7        && !earnedBadges.contains('streak_7')) {
       toAward.add('streak_7');
-    if (streak >= 30       && !earnedBadges.contains('streak_30'))
+    }
+    if (streak >= 30       && !earnedBadges.contains('streak_30')) {
       toAward.add('streak_30');
-    if (totalEntries >= 10 && !earnedBadges.contains('journaler'))
+    }
+    if (totalEntries >= 10 && !earnedBadges.contains('journaler')) {
       toAward.add('journaler');
+    }
 
     if (toAward.isNotEmpty) {
       await _db.collection('users').doc(userId).update({
