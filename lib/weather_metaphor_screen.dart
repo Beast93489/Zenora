@@ -16,6 +16,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
   late AnimationController _bgController;
   late AnimationController _resultController;
   late Animation<double> _resultAnimation;
+  final Stopwatch _stopwatch = Stopwatch();
 
   final List<Map<String, dynamic>> _weathers = [
     {
@@ -26,7 +27,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       'emotionLabel': 'Joyful',
       'color': Color(0xFFFFB800),
       'bgColors': [Color(0xFF3D2800), Color(0xFF1A1000), Color(0xFF0F0F1E)],
-      'response': "You\'re radiating sunshine today! ☀️ That positive energy is contagious — share it with someone around you and make their day brighter too!",
+      'response': "You're radiating sunshine today! ☀️ That positive energy is contagious — share it with someone around you and make their day brighter too!",
     },
     {
       'emoji': '🌤️',
@@ -46,7 +47,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       'emotionLabel': 'Neutral',
       'color': Color(0xFF95A5A6),
       'bgColors': [Color(0xFF1A2030), Color(0xFF0F1520), Color(0xFF0F0F1E)],
-      'response': "Mixed skies, mixed feelings — that\'s perfectly human. ⛅ Not every day is sunshine, and that\'s okay. Just go with the flow today.",
+      'response': "Mixed skies, mixed feelings — that's perfectly human. ⛅ Not every day is sunshine, and that's okay. Just go with the flow today.",
     },
     {
       'emoji': '🌥️',
@@ -56,7 +57,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       'emotionLabel': 'Low',
       'color': Color(0xFF7F8C8D),
       'bgColors': [Color(0xFF151A20), Color(0xFF0F1218), Color(0xFF0F0F1E)],
-      'response': "Grey skies can feel heavy. 🌥️ It\'s okay to have a quiet, low-energy day. Be kind to yourself — rest is productive too.",
+      'response': "Grey skies can feel heavy. 🌥️ It's okay to have a quiet, low-energy day. Be kind to yourself — rest is productive too.",
     },
     {
       'emoji': '🌧️',
@@ -66,7 +67,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       'emotionLabel': 'Sad',
       'color': Color(0xFF4A90D9),
       'bgColors': [Color(0xFF0A1520), Color(0xFF081018), Color(0xFF0F0F1E)],
-      'response': "Rain has its own kind of beauty — it cleans and renews. 🌧️ Let yourself feel this. Reach out to someone you trust today, you don\'t have to weather this alone.",
+      'response': "Rain has its own kind of beauty — it cleans and renews. 🌧️ Let yourself feel this. Reach out to someone you trust today, you don't have to weather this alone.",
     },
     {
       'emoji': '⛈️',
@@ -86,7 +87,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       'emotionLabel': 'Anxious',
       'color': Color(0xFF9B59B6),
       'bgColors': [Color(0xFF1A0533), Color(0xFF120022), Color(0xFF0F0F1E)],
-      'response': "When everything spins, find one thing to anchor to. 🌪️ Name 5 things you can see right now. Breathe. You\'ve survived every storm so far — this one too.",
+      'response': "When everything spins, find one thing to anchor to. 🌪️ Name 5 things you can see right now. Breathe. You've survived every storm so far — this one too.",
     },
     {
       'emoji': '🌫️',
@@ -96,7 +97,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       'emotionLabel': 'Confused',
       'color': Color(0xFFBDC3C7),
       'bgColors': [Color(0xFF1A1A2E), Color(0xFF10101E), Color(0xFF0F0F1E)],
-      'response': "Fog makes it hard to see — but the path is still there. 🌫️ You don\'t need to see the whole road, just the next step. What\'s one small thing you can do right now?",
+      'response': "Fog makes it hard to see — but the path is still there. 🌫️ You don't need to see the whole road, just the next step. What's one small thing you can do right now?",
     },
     {
       'emoji': '🌈',
@@ -106,7 +107,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       'emotionLabel': 'Hopeful',
       'color': Color(0xFF00B4B4),
       'bgColors': [Color(0xFF003333), Color(0xFF001A1A), Color(0xFF0F0F1E)],
-      'response': "Rainbows only come after rain — and you\'re here for it! 🌈 Something good is on the horizon. Keep that hopeful energy close, it\'ll carry you far.",
+      'response': "Rainbows only come after rain — and you're here for it! 🌈 Something good is on the horizon. Keep that hopeful energy close, it'll carry you far.",
     },
     {
       'emoji': '❄️',
@@ -116,7 +117,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       'emotionLabel': 'Numb',
       'color': Color(0xFFAED6F1),
       'bgColors': [Color(0xFF0A1520), Color(0xFF060E18), Color(0xFF0F0F1E)],
-      'response': "Sometimes we go numb — it\'s the mind\'s way of protecting itself. ❄️ That\'s okay. Wrap yourself in something warm today, literally or figuratively. You matter.",
+      'response': "Sometimes we go numb — it's the mind's way of protecting itself. ❄️ That's okay. Wrap yourself in something warm today, literally or figuratively. You matter.",
     },
     {
       'emoji': '🌙',
@@ -126,7 +127,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       'emotionLabel': 'Peaceful',
       'color': Color(0xFF9B59F5),
       'bgColors': [Color(0xFF0D0030), Color(0xFF080020), Color(0xFF0F0F1E)],
-      'response': "Still nights are for deep thoughts. 🌙 There\'s something beautiful about sitting quietly with yourself. Reflect, rest, and let the world be still for a moment.",
+      'response': "Still nights are for deep thoughts. 🌙 There's something beautiful about sitting quietly with yourself. Reflect, rest, and let the world be still for a moment.",
     },
     {
       'emoji': '🌅',
@@ -136,7 +137,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       'emotionLabel': 'Renewed',
       'color': Color(0xFFFF6B35),
       'bgColors': [Color(0xFF3D1500), Color(0xFF200C00), Color(0xFF0F0F1E)],
-      'response': "Every sunrise is a second chance. 🌅 Something feels fresh and new today — lean into that energy and start something you\'ve been putting off. Today is the day!",
+      'response': "Every sunrise is a second chance. 🌅 Something feels fresh and new today — lean into that energy and start something you've been putting off. Today is the day!",
     },
   ];
 
@@ -152,12 +153,14 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       vsync: this, duration: const Duration(milliseconds: 600));
     _resultAnimation = CurvedAnimation(
       parent: _resultController, curve: Curves.easeOutBack);
+    _stopwatch.start();
   }
 
   @override
   void dispose() {
     _bgController.dispose();
     _resultController.dispose();
+    _stopwatch.stop();
     super.dispose();
   }
 
@@ -183,6 +186,7 @@ class _WeatherMetaphorScreenState extends State<WeatherMetaphorScreen>
       emoji: sel['emoji'] as String,
       points: 5,
       preview: 'Weather: ${sel['label']}',
+      timeToWriteSeconds: _stopwatch.elapsed.inSeconds,
     );
     FirebaseService.checkAndAwardBadges();
   }

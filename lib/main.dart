@@ -17,6 +17,8 @@ import 'mood_canvas_screen.dart';
 import 'voice_mode_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'consent_screen.dart';
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +56,7 @@ class ZenoraApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,  // ← add this
       title: 'Zenora',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'sans-serif'),
@@ -120,14 +123,8 @@ class _SplashScreenState extends State<SplashScreen>
     });
     Future.delayed(const Duration(seconds: 3), () {
       if (!mounted) return;
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()));
-      } else {
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const WelcomeScreen()));
-      }
+      Navigator.pushReplacement(context,
+          MaterialPageRoute(builder: (_) => const AuthWrapper()));
     });
   }
 
@@ -262,8 +259,16 @@ class _HomeScreenState extends State<HomeScreen>
     'arey mood log karo pehle 😤',
     'sharma ji ka beta bhi ye use karta hai 👀',
     'Ctrl+Z nahi hota life mein, log karo 📝',
-    'teri anxiety teri hi hai bestie 💀',
+    'teri anxiety Ki Ch...inta hum krenge 💀',
+    'kuch bhi ho jaye, hum hain yahan 🕊️',
     'pagal ho? (affectionately) 🤗',
+    'Crush ki yaad aa rahi hai? write it out! 🥲',
+    'Phukega kya? (in the nicest way possible) 😎',
+    ' Himachal se ho? (because that\'s the vibe I\'m getting) 🏔️',
+    'BGMI ya Free Fire? (just trying to connect) 🎮',
+    'chhote se chhota problem bhi bada lagta hai, but we\'ll get through it together 🫂',
+    'tumhari feelings ko samajhne ki koshish kar raha hoon, thoda time do 🧠',
+    'Teri ex ki yaad aa rahi hai? (because that\'s a mood) 🥲',
   ];
 
   // Mode card data with unique gradients
@@ -865,20 +870,79 @@ class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
+    return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xFF0F0F1E),
-            body: Center(
-              child: CircularProgressIndicator(color: Color(0xFF9B59F5)),
-            ),
-          );
+          return const _LoadingScreen();
         }
-        if (snapshot.hasData) return const HomeScreen();
-        return const WelcomeScreen();
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const WelcomeScreen();
+        }
+        return _ConsentChecker(key: ValueKey(snapshot.data!.uid));
       },
     );
+  }
+}
+
+class _LoadingScreen extends StatelessWidget {
+  const _LoadingScreen();
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Color(0xFF0F0F1E),
+      body: Center(child: CircularProgressIndicator(
+          color: Color(0xFF9B59F5))),
+    );
+  }
+}
+
+class _ConsentChecker extends StatefulWidget {
+  const _ConsentChecker({super.key});
+  @override
+  State<_ConsentChecker> createState() => _ConsentCheckerState();
+}
+
+class _ConsentCheckerState extends State<_ConsentChecker> {
+  bool _loading = true;
+  bool _hasConsent = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final consent = await FirebaseService.hasGivenConsent();
+    if (!mounted) return;
+    setState(() {
+      _hasConsent = consent;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0F0F1E),
+        body: Center(child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: Color(0xFF9B59F5)),
+            SizedBox(height: 16),
+            Text('Checking your profile...', style: TextStyle(color: Colors.white54, fontSize: 13)),
+          ],
+        )),
+      );
+    }
+    if (!_hasConsent) {
+      return ConsentScreen(
+        nextScreen: const HomeScreen(),
+        onConsent: () => setState(() => _hasConsent = true),
+      );
+    }
+    return const HomeScreen();
   }
 }

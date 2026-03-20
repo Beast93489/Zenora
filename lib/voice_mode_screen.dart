@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'firebase_service.dart';
+import 'crisis_dialog.dart';
 import 'config.dart';
 import 'dart:convert';
 import 'dart:math';
@@ -24,6 +26,7 @@ class _VoiceModeScreenState extends State<VoiceModeScreen>
   String _detectedEmotion = '';
   String _aiResponse = '';
   double _soundLevel = 0.0;
+  final Stopwatch _stopwatch = Stopwatch();
 
   late AnimationController _rippleController;
   late AnimationController _waveController;
@@ -103,6 +106,8 @@ class _VoiceModeScreenState extends State<VoiceModeScreen>
       return;
     }
     HapticFeedback.mediumImpact();
+    _stopwatch.reset();
+    _stopwatch.start();
     setState(() { _isListening = true; _transcript = ''; _detectedEmotion = ''; _aiResponse = ''; });
     _resultController.reset();
     _rippleController.repeat();
@@ -118,6 +123,7 @@ class _VoiceModeScreenState extends State<VoiceModeScreen>
 
   void _stopListening() async {
     await _speech.stop();
+    _stopwatch.stop();
     HapticFeedback.mediumImpact();
     setState(() { _isListening = false; _soundLevel = 0; });
     _rippleController.stop();
@@ -162,16 +168,55 @@ class _VoiceModeScreenState extends State<VoiceModeScreen>
       setState(() { _detectedEmotion = emotion; _aiResponse = aiResponse; _isAnalyzing = false; });
       _resultController.forward();
 
+      // Crisis detection on transcript
+      final crisisResult = FirebaseService.analyzeTextForCrisis(_transcript);
+      final crisisLevel = crisisResult['crisisLevel'] as int;
+      final wordCount = _transcript.trim().split(RegExp(r'\s+')).length;
+      final timeSeconds = _stopwatch.elapsed.inSeconds;
+
       final emotionInfo = _emotionData[emotion]!;
       FirebaseService.saveMoodEntry(mode: 'voice_mode', emotion: emotion, emotionLabel: emotionInfo['label'] as String, emoji: emotionInfo['emoji'] as String, points: 15,
-        preview: '🎤 "${_transcript.length > 50 ? _transcript.substring(0, 50) + '...' : _transcript}"');
+        preview: '🎤 "${_transcript.length > 50 ? _transcript.substring(0, 50) + '...' : _transcript}"',
+        wordCount: wordCount,
+        timeToWriteSeconds: timeSeconds,
+        crisisLevel: crisisLevel,
+      );
       FirebaseService.checkAndAwardBadges();
+
+      // Show crisis helpline if needed
+      if (crisisLevel >= 2 && mounted) {
+        showCrisisDialog(context, crisisLevel);
+      }
     } catch (e) {
       debugPrint('Voice analysis error: $e');
       final emotion = _detectLocally(_transcript);
       if (!mounted) return;
       setState(() { _detectedEmotion = emotion; _aiResponse = _getFallback(emotion); _isAnalyzing = false; });
       _resultController.forward();
+
+      // Show fallback snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('AI couldn\'t connect — used local analysis 🤖', style: TextStyle(color: Colors.white)),
+          backgroundColor: Color(0xFF7F8C8D), behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 3),
+        ));
+      }
+
+      // Still track ghost metrics on fallback
+      final crisisResult = FirebaseService.analyzeTextForCrisis(_transcript);
+      final crisisLevel = crisisResult['crisisLevel'] as int;
+      final wordCount = _transcript.trim().split(RegExp(r'\s+')).length;
+      final timeSeconds = _stopwatch.elapsed.inSeconds;
+      final emotionInfo = _emotionData[emotion]!;
+      FirebaseService.saveMoodEntry(mode: 'voice_mode', emotion: emotion, emotionLabel: emotionInfo['label'] as String, emoji: emotionInfo['emoji'] as String, points: 15,
+        preview: '🎤 "${_transcript.length > 50 ? _transcript.substring(0, 50) + '...' : _transcript}"',
+        wordCount: wordCount,
+        timeToWriteSeconds: timeSeconds,
+        crisisLevel: crisisLevel,
+      );
+      FirebaseService.checkAndAwardBadges();
+      if (crisisLevel >= 2 && mounted) showCrisisDialog(context, crisisLevel);
     }
   }
 

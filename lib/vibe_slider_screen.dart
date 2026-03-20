@@ -18,6 +18,7 @@ class _VibeSliderScreenState extends State<VibeSliderScreen>
   late AnimationController _resultController;
   late Animation<double> _bounceAnimation;
   late Animation<double> _resultAnimation;
+  final Stopwatch _stopwatch = Stopwatch();
 
   // Vibe levels from 0.0 to 1.0
   final List<Map<String, dynamic>> _vibes = [
@@ -121,12 +122,14 @@ class _VibeSliderScreenState extends State<VibeSliderScreen>
       parent: _resultController,
       curve: Curves.easeOutBack,
     );
+    _stopwatch.start();
   }
 
   @override
   void dispose() {
     _bounceController.dispose();
     _resultController.dispose();
+    _stopwatch.stop();
     super.dispose();
   }
 
@@ -155,6 +158,7 @@ class _VibeSliderScreenState extends State<VibeSliderScreen>
       emoji: _currentVibe['emoji']?.toString() ?? '😐',
       points: 5,
       preview: 'Vibe: ${_currentVibe['label']}',
+      timeToWriteSeconds: _stopwatch.elapsed.inSeconds,
     );
     FirebaseService.checkAndAwardBadges();
     if (!mounted) return;

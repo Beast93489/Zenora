@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'firebase_service.dart';
-import 'dart:ui' as ui;
-import 'dart:typed_data';
 
 class MoodCanvasScreen extends StatefulWidget {
   const MoodCanvasScreen({super.key});
@@ -23,6 +21,7 @@ class _MoodCanvasScreenState extends State<MoodCanvasScreen>
   bool _isEraser = false;
   late AnimationController _resultController;
   late Animation<double> _resultAnimation;
+  final Stopwatch _stopwatch = Stopwatch();
 
   // Color palette with emotion mapping
   final List<Map<String, dynamic>> _palette = [
@@ -44,7 +43,7 @@ class _MoodCanvasScreenState extends State<MoodCanvasScreen>
     'joy':      {'emoji': '😊', 'color': Color(0xFFFFB800), 'label': 'Joyful',
       'msg': 'Warm colors = warm soul! Your canvas is giving happy era fr 🌟'},
     'sadness':  {'emoji': '😔', 'color': Color(0xFF4A90D9), 'label': 'Melancholic',
-      'msg': 'Blues and darks... we see the depth in you bestie 💙'},
+      'msg': 'Blues and darks... we see the depth in you Mate 💙'},
     'anger':    {'emoji': '😤', 'color': Color(0xFFE74C3C), 'label': 'Fired Up',
       'msg': 'That red energy is INTENSE. Villain arc confirmed 🔥'},
     'fear':     {'emoji': '😰', 'color': Color(0xFF9B59B6), 'label': 'Anxious',
@@ -64,11 +63,13 @@ class _MoodCanvasScreenState extends State<MoodCanvasScreen>
         vsync: this, duration: const Duration(milliseconds: 600));
     _resultAnimation = CurvedAnimation(
         parent: _resultController, curve: Curves.easeOutBack);
+    _stopwatch.start();
   }
 
   @override
   void dispose() {
     _resultController.dispose();
+    _stopwatch.stop();
     super.dispose();
   }
 
@@ -151,6 +152,7 @@ class _MoodCanvasScreenState extends State<MoodCanvasScreen>
       emoji: emotionInfo['emoji'] as String,
       points: 10,
       preview: 'Mood Canvas: painted with ${_strokes.length} strokes',
+      timeToWriteSeconds: _stopwatch.elapsed.inSeconds,
     );
     FirebaseService.checkAndAwardBadges();
   }
@@ -316,7 +318,7 @@ class _MoodCanvasScreenState extends State<MoodCanvasScreen>
                                           color: Colors.white.withValues(alpha: 0.2))),
                                   const SizedBox(height: 12),
                                   Text(
-                                    'start painting bestie\nno judgment here',
+                                    'start painting bhai\nno judgment here',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                         color: Colors.white.withValues(alpha: 0.2),

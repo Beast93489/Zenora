@@ -25,6 +25,7 @@ class _ScenarioCardsScreenState extends State<ScenarioCardsScreen>
   late Animation<double> _resultAnimation;
   late AnimationController _swipeController;
   late Animation<Offset> _swipeAnimation;
+  final Stopwatch _stopwatch = Stopwatch();
 
   @override
   void initState() {
@@ -44,6 +45,7 @@ class _ScenarioCardsScreenState extends State<ScenarioCardsScreen>
             begin: Offset.zero, end: const Offset(1.5, 0))
         .animate(CurvedAnimation(
             parent: _swipeController, curve: Curves.easeIn));
+    _stopwatch.start();
     _generateScenarios();
   }
 
@@ -52,6 +54,7 @@ class _ScenarioCardsScreenState extends State<ScenarioCardsScreen>
     _cardController.dispose();
     _resultController.dispose();
     _swipeController.dispose();
+    _stopwatch.stop();
     super.dispose();
   }
 
@@ -128,6 +131,7 @@ class _ScenarioCardsScreenState extends State<ScenarioCardsScreen>
       points: 10,
       preview: 'Scenario Cards: ${_scenarios.length} reactions',
       extra: {'reactions': _reactions, 'emotionCounts': emotionCounts},
+      timeToWriteSeconds: _stopwatch.elapsed.inSeconds,
     );
     FirebaseService.checkAndAwardBadges();
     _generateInsight(emotionCounts, dominant);

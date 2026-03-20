@@ -16,6 +16,7 @@ class _EmojiBoardScreenState extends State<EmojiBoardScreen>
   bool _isAnalyzing = false;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  final Stopwatch _stopwatch = Stopwatch();
 
   final Map<String, List<Map<String, dynamic>>> _emojiCategories = {
     'Happiness': [
@@ -86,11 +87,13 @@ class _EmojiBoardScreenState extends State<EmojiBoardScreen>
       ..repeat(reverse: true);
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.12).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+    _stopwatch.start();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
+    _stopwatch.stop();
     super.dispose();
   }
 
@@ -143,6 +146,7 @@ class _EmojiBoardScreenState extends State<EmojiBoardScreen>
       emoji: _emotionData[emotion]?['emoji'] as String? ?? '😐',
       points: 5,
       preview: 'Emoji Board: ${_selectedEmojis.join(' ')}',
+      timeToWriteSeconds: _stopwatch.elapsed.inSeconds,
     );
     FirebaseService.checkAndAwardBadges();
   }

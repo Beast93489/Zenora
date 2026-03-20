@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'firebase_service.dart';
+import 'main.dart';
 
 // ── Welcome / Onboarding Screen ──────────────────────────────────
 class WelcomeScreen extends StatefulWidget {
@@ -29,23 +30,23 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     {
       'emoji': '🤖',
       'title': 'AI That Listens',
-      'subtitle': 'Powered by Google Gemini AI — Zenora reads your mood from text, emojis, voice, and more. Then responds with empathy.',
+      'subtitle': 'Powered by Groq — Zenora reads your mood from text, emojis, voice, and more. Then responds with empathy.',
       'color': Color(0xFF00B4B4),
-      'genZ': 'your AI dost fr fr 🤖',
+      'genZ': 'Helping you understand your feelings 🤖',
     },
     {
       'emoji': '📊',
       'title': 'Track Your Journey',
       'subtitle': 'Watch your emotional patterns over time. Build streaks, earn badges, and grow your self-awareness every single day.',
       'color': Color(0xFFFFB800),
-      'genZ': 'glow up era loading... ✨',
+      'genZ': 'Track what matters most ✨',
     },
     {
       'emoji': '🔒',
       'title': 'Private & Safe',
       'subtitle': 'Your data is stored anonymously. No ads, no tracking, no judgment. Just a safe space to be yourself.',
       'color': Color(0xFF27AE60),
-      'genZ': 'teri diary safe hai yaar 🛡️',
+      'genZ': 'Safety ki chinta nahi 🛡️',
     },
   ];
 
@@ -339,9 +340,10 @@ class _LoginScreenState extends State<LoginScreen>
     if (!mounted) return;
     setState(() => _loading = false);
     if (result['success'] == true) {
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacement(context,
+          MaterialPageRoute(builder: (_) => const AuthWrapper()));
     } else {
-      _snack(result['error']?.toString() ?? 'Something went wrong yaar 😔');
+      _snack(result['error']?.toString() ?? 'Kuch toh sahi ni hua 😔');
     }
   }
 
@@ -356,7 +358,8 @@ class _LoginScreenState extends State<LoginScreen>
       if (isNew) {
         _snack('Welcome to Zenora baawe! 🎉');
       }
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacement(context,
+          MaterialPageRoute(builder: (_) => const AuthWrapper()));
     } else {
       final error = result['error']?.toString() ?? '';
       if (!error.contains('Cancelled')) {
@@ -372,7 +375,8 @@ class _LoginScreenState extends State<LoginScreen>
     if (!mounted) return;
     setState(() => _loading = false);
     if (result['success'] == true) {
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacement(context,
+          MaterialPageRoute(builder: (_) => const AuthWrapper()));
     } else {
       _snack(result['error']?.toString() ?? 'Guest sign-in failed');
     }

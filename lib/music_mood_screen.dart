@@ -26,6 +26,7 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
   String? _currentPreviewUrl;
   late AnimationController _resultController;
   late Animation<double> _resultAnimation;
+  final Stopwatch _stopwatch = Stopwatch();
 
   static const String _clientId = AppConfig.spotifyClientId;
   static const String _clientSecret = AppConfig.spotifyClientSecret;
@@ -72,6 +73,7 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) setState(() => _isPlaying = false);
     });
+    _stopwatch.start();
     _getSpotifyToken();
   }
 
@@ -80,6 +82,7 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
     _searchCtrl.dispose();
     _resultController.dispose();
     _audioPlayer.dispose();
+    _stopwatch.stop();
     super.dispose();
   }
 
@@ -258,6 +261,14 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
     });
     _resultController.forward();
     _saveToFirebase(song, emotion);
+    // Show fallback snackbar
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('AI couldn\'t connect — used local analysis 🤖', style: TextStyle(color: Colors.white)),
+        backgroundColor: Color(0xFF7F8C8D), behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 3),
+      ));
+    }
   }
 
   void _saveToFirebase(Map<String, dynamic> song, String emotion) {
@@ -274,6 +285,7 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
         'artist': song['artist'],
         'album': song['album'],
       },
+      timeToWriteSeconds: _stopwatch.elapsed.inSeconds,
     );
     FirebaseService.checkAndAwardBadges();
   }

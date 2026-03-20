@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_service.dart';
+import 'main.dart';
 
 // ── Theme provider ───────────────────────────────────────────────
 enum ZenoraTheme { dark, purple, teal }
@@ -303,7 +303,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       builder: (_) => _sheet(title: '🔒  Privacy & Data', child: Column(mainAxisSize: MainAxisSize.min, children: [
         _infoTile('🛡️', 'Data Storage', 'Stored anonymously on Firebase. No personal info linked to mood entries.'),
         _divider(),
-        _infoTile('🔑', 'AI Security', 'Gemini analyzes text for emotion only — not stored permanently.'),
+        _infoTile('🔑', 'AI Security', 'Groq analyzes text for emotion only — not stored permanently.'),
         _divider(),
         _infoTile('📊', 'Research', 'Only anonymous aggregated data used in publications. Teri diary safe hai 😌'),
         _divider(),
@@ -328,7 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final faqs = [
       {'q': 'How do I log my mood? 🎯', 'a': 'Tap any of the 8 expression modes on Home — Journal, Emoji Board, Vibe Slider, Music Mood, and more!'},
       {'q': 'What are Zeno Points? ⚡', 'a': 'Points earned every time you log a mood. Voice mode gives most (+15 pts), quick check-ins give least (+5 pts).'},
-      {'q': 'How does the AI work? 🤖', 'a': 'Google Gemini analyzes your text/voice and detects emotion. No data stored permanently.'},
+      {'q': 'How does the AI work? 🤖', 'a': 'Groq analyzes your text/voice and detects emotion. No data stored permanently.'},
       {'q': 'Is my data private? 🔒', 'a': 'Yes! All data stored anonymously. Teri diary safe hai yaar 😌'},
       {'q': 'How do I earn badges? 🏅', 'a': 'Auto-earned by logging moods, maintaining streaks, trying all modes!'},
       {'q': 'App is slow/crashing? 😭', 'a': 'Try restarting. If issue persists, email ds7794092@gmail.com!'},
@@ -393,7 +393,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             Wrap(spacing: 8, runSpacing: 8, children: [
               _techChip('Flutter', const Color(0xFF0553B1)),
               _techChip('Firebase', const Color(0xFFFF6B35)),
-              _techChip('Gemini AI', const Color(0xFF4A90D9)),
+              _techChip('Groq AI', const Color(0xFF4A90D9)),
               _techChip('Spotify API', const Color(0xFF1DB954)),
               _techChip('Firestore', const Color(0xFFFFB800)),
               _techChip('Firebase Auth', const Color(0xFF9B59F5)),
@@ -423,7 +423,16 @@ class _ProfileScreenState extends State<ProfileScreen>
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Stay 😌', style: TextStyle(color: Colors.white54))),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE74C3C), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-          onPressed: () async { Navigator.pop(context); await FirebaseAuth.instance.signOut(); if (mounted) Navigator.of(context).popUntil((r) => r.isFirst); },
+          onPressed: () async {
+              Navigator.pop(context);
+              await FirebaseService.signOut();
+              if (mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => AuthWrapper()),
+                  (route) => false,
+                );
+              }
+            },
           child: const Text('Sign Out', style: TextStyle(color: Colors.white)),
         ),
       ],

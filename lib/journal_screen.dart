@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'firebase_service.dart';
+import 'crisis_dialog.dart';
 import 'config.dart';
 import 'dart:convert';
 
@@ -22,6 +24,7 @@ class _JournalScreenState extends State<JournalScreen>
   late AnimationController _resultController;
   late Animation<double> _resultAnimation;
   late AnimationController _shimmerController;
+  final Stopwatch _stopwatch = Stopwatch();
 
   final List<String> _prompts = [
     'spill the tea bhai, what happened today? ☕',
@@ -77,6 +80,7 @@ class _JournalScreenState extends State<JournalScreen>
     _shimmerController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1500))
       ..repeat();
+    _stopwatch.start();
   }
 
   @override
@@ -85,6 +89,7 @@ class _JournalScreenState extends State<JournalScreen>
     _focusNode.dispose();
     _resultController.dispose();
     _shimmerController.dispose();
+    _stopwatch.stop();
     super.dispose();
   }
 
@@ -141,16 +146,16 @@ Journal entry: "$text"''',
           emotion = 'neutral';
         }
         if (aiResponse.isEmpty) aiResponse = _getLocalResponse(emotion);
-        return {'emotion': emotion, 'response': aiResponse};
+        return {'emotion': emotion, 'response': aiResponse, 'fallback': 'false'};
       } else {
         debugPrint('Groq error: ${response.body}');
         final emotion = _detectEmotionLocally(text);
-        return {'emotion': emotion, 'response': _getLocalResponse(emotion)};
+        return {'emotion': emotion, 'response': _getLocalResponse(emotion), 'fallback': 'true'};
       }
     } catch (e) {
       debugPrint('Journal error: $e');
       final emotion = _detectEmotionLocally(text);
-      return {'emotion': emotion, 'response': _getLocalResponse(emotion)};
+      return {'emotion': emotion, 'response': _getLocalResponse(emotion), 'fallback': 'true'};
     }
   }
 
@@ -198,21 +203,47 @@ Journal entry: "$text"''',
     setState(() { _isAnalyzing = true; _detectedEmotion = ''; _aiResponse = ''; });
     _resultController.reset();
 
+    // Stop the stopwatch to capture time
+    _stopwatch.stop();
+    final timeSeconds = _stopwatch.elapsed.inSeconds;
+
     final result = await _analyzeWithGroq(_controller.text);
     final emotion = result['emotion']!;
+    final usedFallback = result['fallback'] == 'true';
     final emotionInfo = _emotionData[emotion] ?? _emotionData['neutral']!;
+
+    // Crisis detection
+    final crisisResult = FirebaseService.analyzeTextForCrisis(_controller.text);
+    final crisisLevel = crisisResult['crisisLevel'] as int;
 
     if (!mounted) return;
     setState(() { _isAnalyzing = false; _detectedEmotion = emotion; _aiResponse = result['response']!; });
     _resultController.forward();
+
+    // Show fallback snackbar if AI failed
+    if (usedFallback && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('AI couldn\'t connect — used local analysis 🤖', style: TextStyle(color: Colors.white)),
+        backgroundColor: Color(0xFF7F8C8D), behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 3),
+      ));
+    }
 
     FirebaseService.saveMoodEntry(
       mode: 'journal', emotion: emotion,
       emotionLabel: emotionInfo['label'] as String,
       emoji: emotionInfo['emoji'] as String, points: 10,
       preview: _controller.text.length > 60 ? '${_controller.text.substring(0, 60)}...' : _controller.text,
+      wordCount: _wordCount,
+      timeToWriteSeconds: timeSeconds,
+      crisisLevel: crisisLevel,
     );
     FirebaseService.checkAndAwardBadges();
+
+    // Show crisis helpline dialog if needed
+    if (crisisLevel >= 2 && mounted) {
+      showCrisisDialog(context, crisisLevel);
+    }
   }
 
   void _clearEntry() {
@@ -222,6 +253,9 @@ Journal entry: "$text"''',
       _currentTip = (_writingTips..shuffle()).first;
     });
     _resultController.reset();
+    // Reset stopwatch for new entry
+    _stopwatch.reset();
+    _stopwatch.start();
   }
 
   String _getFormattedDate() {
