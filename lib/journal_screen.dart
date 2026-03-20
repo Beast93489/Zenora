@@ -101,7 +101,14 @@ class _JournalScreenState extends State<JournalScreen>
   }
 
   Future<Map<String, String>> _analyzeWithGroq(String text) async {
+    // Guard: if key is empty, skip API call entirely
+    if (AppConfig.groqKey.isEmpty) {
+      debugPrint('Groq key is EMPTY — did you launch via run.ps1?');
+      final emotion = _detectEmotionLocally(text);
+      return {'emotion': emotion, 'response': _getLocalResponse(emotion), 'fallback': 'true'};
+    }
     try {
+      debugPrint('Groq key present: ${AppConfig.groqKey.substring(0, 8)}...');
       final response = await http.post(
         Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
         headers: {
@@ -119,7 +126,10 @@ class _JournalScreenState extends State<JournalScreen>
               'role': 'user',
               'content': '''Analyze the emotion in this journal entry and respond in exactly this format:
 EMOTION: [one of: joy, sadness, anger, fear, surprise, disgust, neutral]
+CRISIS: [0 = no concern, 1 = mild distress, 2 = serious concern (hopelessness, self-harm hints), 3 = immediate risk (suicidal intent, plans to harm)]
 RESPONSE: [a warm, empathetic 2-3 sentence response to the person]
+
+IMPORTANT: Be sensitive to crisis signals in ANY language including Hindi, Hinglish, Punjabi. Words like "marna", "maut", "khatam", "mar jaun" are crisis indicators.
 
 Journal entry: "$text"''',
             }
@@ -129,26 +139,31 @@ Journal entry: "$text"''',
         }),
       );
 
+      debugPrint('Groq response status: ${response.statusCode}');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final responseText = data['choices'][0]['message']['content'] as String;
         final lines = responseText.split('\n');
         String emotion = 'neutral';
         String aiResponse = '';
+        int aiCrisis = 0;
         for (final line in lines) {
           if (line.startsWith('EMOTION:')) {
             emotion = line.replaceFirst('EMOTION:', '').trim().toLowerCase();
           } else if (line.startsWith('RESPONSE:')) {
             aiResponse = line.replaceFirst('RESPONSE:', '').trim();
+          } else if (line.startsWith('CRISIS:')) {
+            final val = line.replaceFirst('CRISIS:', '').trim();
+            aiCrisis = int.tryParse(val.replaceAll(RegExp(r'[^0-3]'), '')) ?? 0;
           }
         }
         if (!['joy','sadness','anger','fear','surprise','disgust','neutral'].contains(emotion)) {
           emotion = 'neutral';
         }
         if (aiResponse.isEmpty) aiResponse = _getLocalResponse(emotion);
-        return {'emotion': emotion, 'response': aiResponse, 'fallback': 'false'};
+        return {'emotion': emotion, 'response': aiResponse, 'fallback': 'false', 'aiCrisis': '$aiCrisis'};
       } else {
-        debugPrint('Groq error: ${response.body}');
+        debugPrint('Groq error ${response.statusCode}: ${response.body}');
         final emotion = _detectEmotionLocally(text);
         return {'emotion': emotion, 'response': _getLocalResponse(emotion), 'fallback': 'true'};
       }
@@ -212,9 +227,12 @@ Journal entry: "$text"''',
     final usedFallback = result['fallback'] == 'true';
     final emotionInfo = _emotionData[emotion] ?? _emotionData['neutral']!;
 
-    // Crisis detection
+    // Crisis detection: max of local keywords + AI assessment
     final crisisResult = FirebaseService.analyzeTextForCrisis(_controller.text);
-    final crisisLevel = crisisResult['crisisLevel'] as int;
+    final localCrisis = crisisResult['crisisLevel'] as int;
+    final aiCrisis = int.tryParse(result['aiCrisis'] ?? '0') ?? 0;
+    final crisisLevel = localCrisis > aiCrisis ? localCrisis : aiCrisis;
+    debugPrint('Crisis — local: $localCrisis, AI: $aiCrisis, final: $crisisLevel');
 
     if (!mounted) return;
     setState(() { _isAnalyzing = false; _detectedEmotion = emotion; _aiResponse = result['response']!; });

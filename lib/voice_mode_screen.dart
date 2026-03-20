@@ -133,7 +133,38 @@ class _VoiceModeScreenState extends State<VoiceModeScreen>
   Future<void> _analyzeVoice() async {
     if (_transcript.trim().isEmpty) return;
     setState(() => _isAnalyzing = true);
+
+    // Guard: skip Groq if key is empty
+    if (AppConfig.groqKey.isEmpty) {
+      debugPrint('Groq key is EMPTY — launch via run.ps1');
+      final emotion = _detectLocally(_transcript);
+      if (!mounted) return;
+      setState(() { _detectedEmotion = emotion; _aiResponse = _getFallback(emotion); _isAnalyzing = false; });
+      _resultController.forward();
+
+      final crisisResult = FirebaseService.analyzeTextForCrisis(_transcript);
+      final crisisLevel = crisisResult['crisisLevel'] as int;
+      final wordCount = _transcript.trim().split(RegExp(r'\s+')).length;
+      final timeSeconds = _stopwatch.elapsed.inSeconds;
+      final emotionInfo = _emotionData[emotion]!;
+      FirebaseService.saveMoodEntry(mode: 'voice_mode', emotion: emotion, emotionLabel: emotionInfo['label'] as String, emoji: emotionInfo['emoji'] as String, points: 15,
+        preview: '🎤 "${_transcript.length > 50 ? '${_transcript.substring(0, 50)}...' : _transcript}"',
+        wordCount: wordCount, timeToWriteSeconds: timeSeconds, crisisLevel: crisisLevel,
+      );
+      FirebaseService.checkAndAwardBadges();
+      if (crisisLevel >= 2 && mounted) showCrisisDialog(context, crisisLevel);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('AI couldn\'t connect — used local analysis 🤖', style: TextStyle(color: Colors.white)),
+          backgroundColor: Color(0xFF7F8C8D), behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 3),
+        ));
+      }
+      return;
+    }
+
     try {
+      debugPrint('Groq key present: ${AppConfig.groqKey.substring(0, 8)}...');
       final response = await http.post(
         Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
         headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ${AppConfig.groqKey}'},
@@ -141,7 +172,7 @@ class _VoiceModeScreenState extends State<VoiceModeScreen>
           'model': 'llama-3.1-8b-instant',
           'messages': [
             {'role': 'system', 'content': 'You are an empathetic mental wellness AI. Analyze emotions in voice transcripts.'},
-            {'role': 'user', 'content': 'Analyze the emotion in this voice transcript from a mental wellness app.\n\nTranscript: "$_transcript"\n\nRespond EXACTLY:\nEMOTION: [one of: joy, sadness, anger, fear, surprise, disgust, neutral]\nRESPONSE: [warm, empathetic 2-3 sentences. Be genuine and supportive.]'},
+            {'role': 'user', 'content': 'Analyze the emotion in this voice transcript from a mental wellness app.\n\nTranscript: "$_transcript"\n\nRespond EXACTLY:\nEMOTION: [one of: joy, sadness, anger, fear, surprise, disgust, neutral]\nCRISIS: [0 = no concern, 1 = mild distress, 2 = serious concern, 3 = immediate risk]\nRESPONSE: [warm, empathetic 2-3 sentences. Be genuine and supportive.]\n\nIMPORTANT: Detect crisis in ANY language including Hindi/Hinglish. Words like marna, maut, khatam, mar jaun are crisis indicators.'},
           ],
           'max_tokens': 200, 'temperature': 0.7,
         }),
@@ -149,6 +180,7 @@ class _VoiceModeScreenState extends State<VoiceModeScreen>
 
       String emotion = 'neutral';
       String aiResponse = '';
+      int aiCrisis = 0;
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -156,6 +188,10 @@ class _VoiceModeScreenState extends State<VoiceModeScreen>
         for (final line in text.split('\n')) {
           if (line.startsWith('EMOTION:')) emotion = line.replaceFirst('EMOTION:', '').trim().toLowerCase();
           else if (line.startsWith('RESPONSE:')) aiResponse = line.replaceFirst('RESPONSE:', '').trim();
+          else if (line.startsWith('CRISIS:')) {
+            final val = line.replaceFirst('CRISIS:', '').trim();
+            aiCrisis = int.tryParse(val.replaceAll(RegExp(r'[^0-3]'), '')) ?? 0;
+          }
         }
         if (!_emotionData.containsKey(emotion)) emotion = 'neutral';
         if (aiResponse.isEmpty) aiResponse = _getFallback(emotion);
@@ -168,9 +204,10 @@ class _VoiceModeScreenState extends State<VoiceModeScreen>
       setState(() { _detectedEmotion = emotion; _aiResponse = aiResponse; _isAnalyzing = false; });
       _resultController.forward();
 
-      // Crisis detection on transcript
+      // Crisis detection: max of local + AI
       final crisisResult = FirebaseService.analyzeTextForCrisis(_transcript);
-      final crisisLevel = crisisResult['crisisLevel'] as int;
+      final localCrisis = crisisResult['crisisLevel'] as int;
+      final crisisLevel = localCrisis > aiCrisis ? localCrisis : aiCrisis;
       final wordCount = _transcript.trim().split(RegExp(r'\s+')).length;
       final timeSeconds = _stopwatch.elapsed.inSeconds;
 

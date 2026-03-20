@@ -18,6 +18,7 @@ import 'voice_mode_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'consent_screen.dart';
+import 'zeno_rewards_screen.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
@@ -421,6 +422,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final pointsProgress = (_zenoPoints % 100) / 100;
+    
 
     return Scaffold(
       body: Container(
@@ -636,7 +638,7 @@ class _HomeScreenState extends State<HomeScreen>
                   GestureDetector(
                     onTap: () => Navigator.push(context,
                         MaterialPageRoute(
-                            builder: (_) => const ProfileScreen())),
+                            builder: (_) => const ZenoRewardsScreen())),
                     child: Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'firebase_service.dart';
 import 'dart:convert';
 import 'config.dart';
@@ -33,7 +35,6 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
   static const String _groqKey = AppConfig.groqKey;
   static const String _groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
-  // Mood-based recommendations shown on empty screen
   final List<Map<String, dynamic>> _moodPlaylists = [
     {'emoji': '🔥', 'mood': 'Feeling Hype', 'query': 'hype workout pump up'},
     {'emoji': '😔', 'mood': 'In My Feels', 'query': 'sad emotional heartbreak'},
@@ -45,7 +46,6 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
     {'emoji': '🎉', 'mood': 'Party Mode', 'query': 'party dance hits 2024'},
   ];
 
-  // Popular search suggestions
   final List<String> _suggestions = [
     'Arijit Singh', 'AP Dhillon', 'The Weeknd', 'Taylor Swift',
     'Sidhu Moosewala', 'Diljit Dosanjh', 'Pritam', 'A.R. Rahman',
@@ -88,8 +88,7 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
 
   Future<void> _getSpotifyToken() async {
     try {
-      final credentials =
-          base64Encode(utf8.encode('$_clientId:$_clientSecret'));
+      final credentials = base64Encode(utf8.encode('$_clientId:$_clientSecret'));
       final response = await http.post(
         Uri.parse('https://accounts.spotify.com/api/token'),
         headers: {
@@ -98,12 +97,9 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
         },
         body: 'grant_type=client_credentials',
       );
-      debugPrint('Spotify token status: ${response.statusCode}');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (mounted) setState(() => _spotifyToken = data['access_token']);
-      } else {
-        debugPrint('Spotify token error: ${response.body}');
       }
     } catch (e) {
       debugPrint('Spotify token exception: $e');
@@ -111,7 +107,6 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
   }
 
   Future<void> _loadRecommendations() async {
-    // Load trending songs in India as default recommendations
     await _searchSongs('top hits india 2024', isRecommendation: true);
   }
 
@@ -127,11 +122,9 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
     });
     try {
       final response = await http.get(
-        Uri.parse(
-            'https://api.spotify.com/v1/search?q=${Uri.encodeComponent(query)}&type=track&limit=10&market=IN'),
+        Uri.parse('https://api.spotify.com/v1/search?q=${Uri.encodeComponent(query)}&type=track&limit=10&market=IN'),
         headers: {'Authorization': 'Bearer $_spotifyToken'},
       );
-      debugPrint('Search status: ${response.statusCode}');
       if (response.statusCode == 401) {
         await _getSpotifyToken();
         return _searchSongs(query, isRecommendation: isRecommendation);
@@ -142,11 +135,10 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
         if (!mounted) return;
         setState(() {
           _searchResults = tracks.map((t) {
-            final artists = (t['artists'] as List)
-                .map((a) => a['name'] as String)
-                .join(', ');
+            final artists = (t['artists'] as List).map((a) => a['name'] as String).join(', ');
             final album = t['album'];
             final images = album['images'] as List;
+            final externalUrls = t['external_urls'] as Map<String, dynamic>?;
             return {
               'id': t['id'] as String,
               'name': t['name'] as String,
@@ -154,31 +146,30 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
               'album': album['name'] as String,
               'image': images.isNotEmpty ? images[0]['url'] as String : '',
               'preview_url': t['preview_url'],
+              'spotify_url': externalUrls?['spotify'] ?? '',
               'popularity': (t['popularity'] as int?) ?? 0,
             };
           }).toList();
           _isSearching = false;
         });
       } else {
-        debugPrint('Search error: ${response.body}');
         if (mounted) setState(() => _isSearching = false);
       }
     } catch (e) {
-      debugPrint('Search exception: $e');
       if (mounted) setState(() => _isSearching = false);
     }
   }
 
-  Future<void> _togglePreview(String? previewUrl) async {
+  Future<void> _togglePreview(Map<String, dynamic> song) async {
+    final previewUrl = song['preview_url'] as String?;
+    final spotifyUrl = song['spotify_url'] as String? ?? '';
+
     if (previewUrl == null || previewUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('No preview available for this song 😔',
-            style: TextStyle(color: Colors.white)),
-        backgroundColor: Color(0xFF5C2D91),
-        behavior: SnackBarBehavior.floating,
-      ));
+      // No preview — show option to open in Spotify
+      _showNoPreviewSheet(song['name'] as String, spotifyUrl);
       return;
     }
+
     if (_isPlaying && _currentPreviewUrl == previewUrl) {
       await _audioPlayer.stop();
       setState(() => _isPlaying = false);
@@ -189,6 +180,93 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
         _isPlaying = true;
         _currentPreviewUrl = previewUrl;
       });
+    }
+  }
+
+  void _showNoPreviewSheet(String songName, String spotifyUrl) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A0533),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(color: const Color(0x33FFFFFF)),
+        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 16),
+          const Text('🎵', style: TextStyle(fontSize: 40)),
+          const SizedBox(height: 12),
+          const Text('Preview not available',
+              style: TextStyle(color: Colors.white, fontSize: 18,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text('Spotify doesn\'t provide a preview for "$songName"',
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 20),
+          if (spotifyUrl.isNotEmpty)
+            GestureDetector(
+              onTap: () async {
+                Navigator.pop(context);
+                final uri = Uri.parse(spotifyUrl);
+                if (await canLaunchUrl(uri)) {
+                  if (!await launchUrl(uri, mode: LaunchMode.externalNonBrowserApplication)) {
+  await launchUrl(uri, mode: LaunchMode.inAppWebView);
+}
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1DB954),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(
+                      color: const Color(0xFF1DB954).withValues(alpha: 0.4),
+                      blurRadius: 12, offset: const Offset(0, 4))],
+                ),
+                child: const Center(child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('🎧', style: TextStyle(fontSize: 18)),
+                    SizedBox(width: 8),
+                    Text('Open in Spotify',
+                        style: TextStyle(color: Colors.white, fontSize: 15,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                )),
+              ),
+            ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0x1AFFFFFF),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(child: Text('Maybe later',
+                  style: TextStyle(color: Colors.white54, fontSize: 14))),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _openInSpotify(String spotifyUrl) async {
+    if (spotifyUrl.isEmpty) return;
+    final uri = Uri.parse(spotifyUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -203,18 +281,26 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
       _searchResults = [];
     });
     _resultController.reset();
+
+    if (_groqKey.isEmpty) {
+      _fallbackAnalysis(song);
+      return;
+    }
+
     try {
       final response = await http.post(
         Uri.parse(_groqUrl),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $_groqKey'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_groqKey',
+        },
         body: jsonEncode({
           'model': 'llama-3.1-8b-instant',
           'messages': [
             {'role': 'system', 'content': 'You are a music emotion analyst for a wellness app.'},
-            {'role': 'user', 'content': 'Analyze the emotional vibe of this song.\n\nSong: "${song['name']}"\nArtist: ${song['artist']}\n\nRespond EXACTLY:\nEMOTION: [one of: joy, sadness, anger, fear, surprise, neutral, hype, romantic]\nRESPONSE: [2-3 sentences, Gen Z friendly, warm]'}
+            {'role': 'user', 'content': 'Analyze the emotional vibe of this song.\n\nSong: "${song['name']}"\nArtist: ${song['artist']}\n\nRespond EXACTLY:\nEMOTION: [one of: joy, sadness, anger, fear, surprise, neutral, hype, romantic]\nRESPONSE: [2-3 sentences, Gen Z friendly, warm]'},
           ],
-          'max_tokens': 200,
-          'temperature': 0.7,
+          'max_tokens': 200, 'temperature': 0.7,
         }),
       );
 
@@ -224,29 +310,19 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
         String emotion = 'neutral';
         String aiResponse = '';
         for (final line in text.split('\n')) {
-          if (line.startsWith('EMOTION:')) {
-            emotion = line.replaceFirst('EMOTION:', '').trim().toLowerCase();
-          } else if (line.startsWith('RESPONSE:')) {
-            aiResponse = line.replaceFirst('RESPONSE:', '').trim();
-          }
+          if (line.startsWith('EMOTION:')) emotion = line.replaceFirst('EMOTION:', '').trim().toLowerCase();
+          else if (line.startsWith('RESPONSE:')) aiResponse = line.replaceFirst('RESPONSE:', '').trim();
         }
         if (!_emotionData.containsKey(emotion)) emotion = 'neutral';
-        if (aiResponse.isEmpty) {
-          aiResponse = _getFallbackResponse(emotion, song['name'] as String);
-        }
+        if (aiResponse.isEmpty) aiResponse = _getFallbackResponse(emotion, song['name'] as String);
         if (!mounted) return;
-        setState(() {
-          _detectedEmotion = emotion;
-          _aiResponse = aiResponse;
-          _isAnalyzing = false;
-        });
+        setState(() { _detectedEmotion = emotion; _aiResponse = aiResponse; _isAnalyzing = false; });
         _resultController.forward();
         _saveToFirebase(song, emotion);
       } else {
         _fallbackAnalysis(song);
       }
     } catch (e) {
-      debugPrint('Analysis error: $e');
       _fallbackAnalysis(song);
     }
   }
@@ -261,30 +337,16 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
     });
     _resultController.forward();
     _saveToFirebase(song, emotion);
-    // Show fallback snackbar
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('AI couldn\'t connect — used local analysis 🤖', style: TextStyle(color: Colors.white)),
-        backgroundColor: Color(0xFF7F8C8D), behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 3),
-      ));
-    }
   }
 
   void _saveToFirebase(Map<String, dynamic> song, String emotion) {
     final emotionInfo = _emotionData[emotion]!;
     FirebaseService.saveMoodEntry(
-      mode: 'music_mood',
-      emotion: emotion,
+      mode: 'music_mood', emotion: emotion,
       emotionLabel: emotionInfo['label'] as String,
-      emoji: emotionInfo['emoji'] as String,
-      points: 10,
+      emoji: emotionInfo['emoji'] as String, points: 10,
       preview: '🎵 ${song['name']} — ${song['artist']}',
-      extra: {
-        'songName': song['name'],
-        'artist': song['artist'],
-        'album': song['album'],
-      },
+      extra: {'songName': song['name'], 'artist': song['artist'], 'album': song['album']},
       timeToWriteSeconds: _stopwatch.elapsed.inSeconds,
     );
     FirebaseService.checkAndAwardBadges();
@@ -292,13 +354,13 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
 
   String _getFallbackResponse(String emotion, String songName) {
     final responses = {
-      'joy':      'Yeh Bhi theek hai , "$songName" energy is giving main character vibes fr fr ✨ You\'re clearly in your happy era!',
-      'sadness':  'Ah, "$songName" hours... We see you 💙 It\'s okay to sit in your feels. You\'re not alone.',
+      'joy':      '"$songName" energy is giving main character vibes fr ✨ You\'re clearly in your happy era!',
+      'sadness':  'Ah, "$songName" hours... We see you 💙 It\'s okay to sit in your feels.',
       'anger':    '"$songName" when you\'re in your villain arc? Iconic. Channel that energy! 🔥',
-      'fear':     'Listening to "$songName" when the anxiety hits different 😰 Take a breath — you\'ve got this.',
+      'fear':     'Listening to "$songName" when the anxiety hits 😰 Take a breath — you\'ve got this.',
       'hype':     '"$songName" on repeat means you\'re built different today 🔥 Go conquer something!',
-      'romantic': 'The "$songName" playlist era... someone\'s catching feelings 🥰 It\'s giving soft hours.',
-      'neutral':  '"$songName" as your vibe? Lowkey iconic. You\'re just existing peacefully and that\'s valid 😌',
+      'romantic': 'The "$songName" playlist era... someone\'s catching feelings 🥰',
+      'neutral':  '"$songName" as your vibe? Lowkey iconic. Just existing peacefully 😌',
       'surprise': '"$songName" out of nowhere? Love the spontaneous energy! ✨',
     };
     return responses[emotion] ?? responses['neutral']!;
@@ -324,14 +386,12 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
             colors: [Color(0xFF0D0020), Color(0xFF0F0F1E), Color(0xFF001A00)],
           ),
         ),
         child: SafeArea(
           child: Column(children: [
-            // Header
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(children: [
@@ -339,56 +399,35 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
                   onTap: () => Navigator.pop(context),
                   child: Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0x1AFFFFFF),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 18),
-                  ),
+                    decoration: BoxDecoration(color: const Color(0x1AFFFFFF),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18)),
                 ),
                 const SizedBox(width: 16),
-                const Text('🎵 Music Mood',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold)),
+                const Text('🎵 Music Mood', style: TextStyle(
+                    color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1DB954).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: const Color(0xFF1DB954)
-                            .withValues(alpha: 0.5)),
+                    border: Border.all(color: const Color(0xFF1DB954).withValues(alpha: 0.5)),
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Container(
-                      width: 8, height: 8,
-                      decoration: BoxDecoration(
-                        color: _spotifyToken != null
-                            ? const Color(0xFF1DB954)
-                            : Colors.grey,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+                    Container(width: 8, height: 8,
+                        decoration: BoxDecoration(
+                            color: _spotifyToken != null ? const Color(0xFF1DB954) : Colors.grey,
+                            shape: BoxShape.circle)),
                     const SizedBox(width: 5),
-                    Text(
-                      _spotifyToken != null ? 'Spotify ✓' : 'Connecting...',
-                      style: TextStyle(
-                          color: _spotifyToken != null
-                              ? const Color(0xFF1DB954)
-                              : Colors.grey,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold),
-                    ),
+                    Text(_spotifyToken != null ? 'Spotify ✓' : 'Connecting...',
+                        style: TextStyle(
+                            color: _spotifyToken != null ? const Color(0xFF1DB954) : Colors.grey,
+                            fontSize: 11, fontWeight: FontWeight.bold)),
                   ]),
                 ),
               ]),
             ),
-
             Expanded(
               child: _detectedEmotion.isNotEmpty && !_isAnalyzing
                   ? _buildResult()
@@ -410,209 +449,117 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
         // Search bar
         Container(
           decoration: BoxDecoration(
-            color: const Color(0x1AFFFFFF),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color: const Color(0xFF1DB954).withValues(alpha: 0.4)),
+            color: const Color(0x1AFFFFFF), borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF1DB954).withValues(alpha: 0.4)),
           ),
           child: TextField(
             controller: _searchCtrl,
             style: const TextStyle(color: Colors.white),
             onSubmitted: (q) => _searchSongs(q),
-            onChanged: (q) {
-              if (q.isEmpty) _loadRecommendations();
-            },
+            onChanged: (q) { if (q.isEmpty) _loadRecommendations(); },
             decoration: InputDecoration(
               hintText: 'Search songs, artists, albums...',
               hintStyle: const TextStyle(color: Colors.white38),
-              prefixIcon:
-                  const Icon(Icons.search, color: Color(0xFF1DB954)),
+              prefixIcon: const Icon(Icons.search, color: Color(0xFF1DB954)),
               suffixIcon: _isSearching
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: SizedBox(
-                        width: 20, height: 20,
-                        child: CircularProgressIndicator(
-                            color: Color(0xFF1DB954), strokeWidth: 2),
-                      ),
-                    )
+                  ? const Padding(padding: EdgeInsets.all(12),
+                      child: SizedBox(width: 20, height: 20,
+                          child: CircularProgressIndicator(color: Color(0xFF1DB954), strokeWidth: 2)))
                   : Row(mainAxisSize: MainAxisSize.min, children: [
                       if (_searchCtrl.text.isNotEmpty)
                         IconButton(
-                          icon: const Icon(Icons.clear,
-                              color: Colors.white38, size: 18),
-                          onPressed: () {
-                            _searchCtrl.clear();
-                            _loadRecommendations();
-                          },
-                        ),
+                          icon: const Icon(Icons.clear, color: Colors.white38, size: 18),
+                          onPressed: () { _searchCtrl.clear(); _loadRecommendations(); }),
                       IconButton(
-                        icon: const Icon(Icons.send_rounded,
-                            color: Color(0xFF1DB954)),
-                        onPressed: () => _searchSongs(_searchCtrl.text),
-                      ),
+                        icon: const Icon(Icons.send_rounded, color: Color(0xFF1DB954)),
+                        onPressed: () => _searchSongs(_searchCtrl.text)),
                     ]),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
         ),
-
         const SizedBox(height: 16),
 
-        // Artist suggestions chips
         if (showEmpty) ...[
-          const Text('🎤 Quick Search',
-              style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 12,
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.bold)),
+          const Text('🎤 Quick Search', style: TextStyle(
+              color: Colors.white54, fontSize: 12, letterSpacing: 1, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _suggestions.map((s) {
-              return GestureDetector(
-                onTap: () {
-                  _searchCtrl.text = s;
-                  _searchSongs(s);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: const Color(0x1AFFFFFF),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: const Color(0xFF1DB954)
-                            .withValues(alpha: 0.3)),
-                  ),
-                  child: Text(s,
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 12)),
-                ),
-              );
-            }).toList(),
-          ),
+          Wrap(spacing: 8, runSpacing: 8,
+            children: _suggestions.map((s) => GestureDetector(
+              onTap: () { _searchCtrl.text = s; _searchSongs(s); },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0x1AFFFFFF), borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF1DB954).withValues(alpha: 0.3))),
+                child: Text(s, style: const TextStyle(color: Colors.white70, fontSize: 12))),
+            )).toList()),
           const SizedBox(height: 20),
-
-          // Mood playlists
-          const Text('🎭 Pick Your Vibe',
-              style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 12,
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.bold)),
+          const Text('🎭 Pick Your Vibe', style: TextStyle(
+              color: Colors.white54, fontSize: 12, letterSpacing: 1, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 4,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 0.85,
-            children: _moodPlaylists.map((mp) {
-              return GestureDetector(
-                onTap: () => _searchSongs(mp['query'] as String),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0x0DFFFFFF),
+            shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 4, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: 0.85,
+            children: _moodPlaylists.map((mp) => GestureDetector(
+              onTap: () => _searchSongs(mp['query'] as String),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: const Color(0x0DFFFFFF),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                        color: const Color(0x1AFFFFFF)),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(mp['emoji'] as String,
-                          style: const TextStyle(fontSize: 24)),
-                      const SizedBox(height: 4),
-                      Text(mp['mood'] as String,
-                          style: const TextStyle(
-                              color: Colors.white60,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                          maxLines: 2),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+                    border: Border.all(color: const Color(0x1AFFFFFF))),
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(mp['emoji'] as String, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(height: 4),
+                  Text(mp['mood'] as String,
+                      style: const TextStyle(color: Colors.white60, fontSize: 9,
+                          fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center, maxLines: 2),
+                ]),
+              ),
+            )).toList()),
           const SizedBox(height: 20),
         ],
 
-        // Results header
         if (showResults) ...[
           Row(children: [
-            const Text('🎵 Songs',
-                style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
-                    letterSpacing: 1,
-                    fontWeight: FontWeight.bold)),
+            const Text('🎵 Songs', style: TextStyle(
+                color: Colors.white54, fontSize: 12, letterSpacing: 1, fontWeight: FontWeight.bold)),
             const Spacer(),
             Text('${_searchResults.length} results',
-                style: const TextStyle(
-                    color: Colors.white38, fontSize: 11)),
+                style: const TextStyle(color: Colors.white38, fontSize: 11)),
           ]),
           const SizedBox(height: 10),
+          ListView.builder(
+            shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+            itemCount: _searchResults.length,
+            itemBuilder: (_, i) => _buildSongTile(_searchResults[i])),
         ],
 
-        // Song results
-        if (showResults)
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _searchResults.length,
-            itemBuilder: (_, i) => _buildSongTile(_searchResults[i]),
-          ),
-
-        // Analyzing state
         if (_isAnalyzing && _selectedSong != null) ...[
           const SizedBox(height: 40),
-          Center(
-            child: Column(children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: _selectedSong!['image'].toString().isNotEmpty
-                    ? Image.network(
-                        _selectedSong!['image'] as String,
-                        width: 120, height: 120,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        width: 120, height: 120,
-                        color: const Color(0xFF1DB954)
-                            .withValues(alpha: 0.2),
-                        child: const Icon(Icons.music_note,
-                            color: Color(0xFF1DB954), size: 48),
-                      ),
-              ),
-              const SizedBox(height: 16),
-              Text(_selectedSong!['name'] as String,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 4),
-              Text(_selectedSong!['artist'] as String,
-                  style: const TextStyle(
-                      color: Colors.white54, fontSize: 14)),
-              const SizedBox(height: 24),
-              const CircularProgressIndicator(
-                  color: Color(0xFF1DB954)),
-              const SizedBox(height: 16),
-              const Text('🤖 Decoding your vibe...',
-                  style: TextStyle(
-                      color: Colors.white70, fontSize: 14)),
-            ]),
-          ),
+          Center(child: Column(children: [
+            ClipRRect(borderRadius: BorderRadius.circular(16),
+              child: _selectedSong!['image'].toString().isNotEmpty
+                  ? Image.network(_selectedSong!['image'] as String,
+                      width: 120, height: 120, fit: BoxFit.cover)
+                  : Container(width: 120, height: 120,
+                      color: const Color(0xFF1DB954).withValues(alpha: 0.2),
+                      child: const Icon(Icons.music_note, color: Color(0xFF1DB954), size: 48))),
+            const SizedBox(height: 16),
+            Text(_selectedSong!['name'] as String,
+                style: const TextStyle(color: Colors.white, fontSize: 18,
+                    fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+            const SizedBox(height: 4),
+            Text(_selectedSong!['artist'] as String,
+                style: const TextStyle(color: Colors.white54, fontSize: 14)),
+            const SizedBox(height: 24),
+            const CircularProgressIndicator(color: Color(0xFF1DB954)),
+            const SizedBox(height: 16),
+            const Text('🤖 Decoding your vibe...',
+                style: TextStyle(color: Colors.white70, fontSize: 14)),
+          ])),
         ],
       ]),
     );
@@ -620,8 +567,8 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
 
   Widget _buildSongTile(Map<String, dynamic> song) {
     final previewUrl = song['preview_url'] as String?;
-    final isThisPlaying =
-        _isPlaying && _currentPreviewUrl == previewUrl && previewUrl != null;
+    final hasPreview = previewUrl != null && previewUrl.isNotEmpty;
+    final isThisPlaying = _isPlaying && _currentPreviewUrl == previewUrl && hasPreview;
 
     return GestureDetector(
       onTap: () => _analyzeSong(song),
@@ -629,97 +576,77 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0x0DFFFFFF),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0x1AFFFFFF)),
-        ),
+          color: const Color(0x0DFFFFFF), borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0x1AFFFFFF))),
         child: Row(children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+          ClipRRect(borderRadius: BorderRadius.circular(8),
             child: song['image'].toString().isNotEmpty
-                ? Image.network(
-                    song['image'] as String,
-                    width: 52, height: 52,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _musicPlaceholder(),
-                  )
-                : _musicPlaceholder(),
-          ),
+                ? Image.network(song['image'] as String,
+                    width: 52, height: 52, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _musicPlaceholder())
+                : _musicPlaceholder()),
           const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(song['name'] as String,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 3),
-                Text(song['artist'] as String,
-                    style: const TextStyle(
-                        color: Colors.white54, fontSize: 12),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 3),
-                Text(song['album'] as String,
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 11),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-              ],
-            ),
-          ),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(song['name'] as String,
+                style: const TextStyle(color: Colors.white, fontSize: 14,
+                    fontWeight: FontWeight.bold),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 3),
+            Text(song['artist'] as String,
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 3),
+            // Preview availability indicator
+            Row(children: [
+              Icon(hasPreview ? Icons.music_note : Icons.music_off,
+                  color: hasPreview ? const Color(0xFF1DB954) : Colors.white24,
+                  size: 11),
+              const SizedBox(width: 3),
+              Text(hasPreview ? '30s preview' : 'no preview',
+                  style: TextStyle(
+                      color: hasPreview ? const Color(0xFF1DB954) : Colors.white24,
+                      fontSize: 10)),
+            ]),
+          ])),
           const SizedBox(width: 8),
           Row(mainAxisSize: MainAxisSize.min, children: [
             GestureDetector(
-              onTap: () => _togglePreview(previewUrl),
+              onTap: () => _togglePreview(song),
               child: Container(
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: previewUrl != null
+                  color: hasPreview
                       ? const Color(0xFF1DB954).withValues(alpha: 0.2)
                       : const Color(0x1AFFFFFF),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isThisPlaying
-                      ? Icons.stop_rounded
-                      : Icons.play_arrow_rounded,
-                  color: previewUrl != null
-                      ? const Color(0xFF1DB954)
-                      : Colors.white24,
-                  size: 18,
-                ),
+                  isThisPlaying ? Icons.stop_rounded
+                      : hasPreview ? Icons.play_arrow_rounded
+                      : Icons.open_in_new_rounded,
+                  color: hasPreview ? const Color(0xFF1DB954) : Colors.white38,
+                  size: 18),
               ),
             ),
             const SizedBox(width: 6),
-            const Icon(Icons.chevron_right,
-                color: Colors.white24, size: 20),
+            const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
           ]),
         ]),
       ),
     );
   }
 
-  Widget _musicPlaceholder() {
-    return Container(
-      width: 52, height: 52,
-      decoration: BoxDecoration(
+  Widget _musicPlaceholder() => Container(
+    width: 52, height: 52,
+    decoration: BoxDecoration(
         color: const Color(0xFF1DB954).withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Icon(Icons.music_note,
-          color: Color(0xFF1DB954), size: 24),
-    );
-  }
+        borderRadius: BorderRadius.circular(8)),
+    child: const Icon(Icons.music_note, color: Color(0xFF1DB954), size: 24));
 
   Widget _buildResult() {
-    final emotionInfo =
-        _emotionData[_detectedEmotion] ?? _emotionData['neutral']!;
+    final emotionInfo = _emotionData[_detectedEmotion] ?? _emotionData['neutral']!;
     final color = emotionInfo['color'] as Color;
+    final spotifyUrl = _selectedSong?['spotify_url'] as String? ?? '';
 
     return ScaleTransition(
       scale: _resultAnimation,
@@ -728,120 +655,121 @@ class _MusicMoodScreenState extends State<MusicMoodScreen>
         child: Column(children: [
           if (_selectedSong != null) ...[
             const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: _selectedSong!['image'].toString().isNotEmpty
-                  ? Image.network(
-                      _selectedSong!['image'] as String,
-                      width: 160, height: 160,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      width: 160, height: 160,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Icon(Icons.music_note,
-                          color: Colors.white, size: 64),
+            // Album art with Spotify button overlay
+            Stack(alignment: Alignment.bottomRight, children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: _selectedSong!['image'].toString().isNotEmpty
+                    ? Image.network(_selectedSong!['image'] as String,
+                        width: 160, height: 160, fit: BoxFit.cover)
+                    : Container(width: 160, height: 160,
+                        decoration: BoxDecoration(color: color.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20)),
+                        child: const Icon(Icons.music_note, color: Colors.white, size: 64)),
+              ),
+              if (spotifyUrl.isNotEmpty)
+                GestureDetector(
+                  onTap: () => _openInSpotify(spotifyUrl),
+                  child: Container(
+                    margin: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1DB954),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [BoxShadow(
+                          color: const Color(0xFF1DB954).withValues(alpha: 0.5),
+                          blurRadius: 8)],
                     ),
-            ),
+                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text('🎧', style: TextStyle(fontSize: 12)),
+                      SizedBox(width: 4),
+                      Text('Spotify', style: TextStyle(
+                          color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                    ]),
+                  ),
+                ),
+            ]),
             const SizedBox(height: 12),
             Text(_selectedSong!['name'] as String,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center),
+                style: const TextStyle(color: Colors.white, fontSize: 20,
+                    fontWeight: FontWeight.bold), textAlign: TextAlign.center),
             const SizedBox(height: 4),
             Text(_selectedSong!['artist'] as String,
-                style: const TextStyle(
-                    color: Colors.white54, fontSize: 14)),
+                style: const TextStyle(color: Colors.white54, fontSize: 14)),
           ],
           const SizedBox(height: 20),
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            width: double.infinity, padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: color.withValues(alpha: 0.4)),
-            ),
+              color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withValues(alpha: 0.4))),
             child: Column(children: [
-              Text(emotionInfo['emoji'] as String,
-                  style: const TextStyle(fontSize: 52)),
+              Text(emotionInfo['emoji'] as String, style: const TextStyle(fontSize: 52)),
               const SizedBox(height: 8),
               Text('Vibe: ${emotionInfo['label']}',
-                  style: TextStyle(
-                      color: color,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold)),
+                  style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              Text(_aiResponse,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      height: 1.5)),
+              Text(_aiResponse, textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5)),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0x1A9B59F5),
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                    color: const Color(0x1A9B59F5), borderRadius: BorderRadius.circular(20)),
                 child: const Text('⚡ +10 Zeno Points earned!',
-                    style: TextStyle(
-                        color: Color(0xFF9B59F5),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13)),
-              ),
+                    style: TextStyle(color: Color(0xFF9B59F5),
+                        fontWeight: FontWeight.bold, fontSize: 13))),
             ]),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+
+          // Open in Spotify full button
+          if (spotifyUrl.isNotEmpty)
+            GestureDetector(
+              onTap: () => _openInSpotify(spotifyUrl),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1DB954),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(
+                      color: const Color(0xFF1DB954).withValues(alpha: 0.4),
+                      blurRadius: 12, offset: const Offset(0, 4))],
+                ),
+                child: const Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text('🎧', style: TextStyle(fontSize: 18)),
+                  SizedBox(width: 8),
+                  Text('Open Full Song in Spotify',
+                      style: TextStyle(color: Colors.white, fontSize: 15,
+                          fontWeight: FontWeight.bold)),
+                ])),
+              ),
+            ),
+
           Row(children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: _reset,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0x1AFFFFFF),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: const Color(0x33FFFFFF)),
-                  ),
-                  child: const Center(
-                    child: Text('🔄  Try Another',
-                        style: TextStyle(
-                            color: Colors.white70,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ),
-            ),
+            Expanded(child: GestureDetector(
+              onTap: _reset,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0x1AFFFFFF), borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0x33FFFFFF))),
+                child: const Center(child: Text('🔄  Try Another',
+                    style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)))),
+            )),
             const SizedBox(width: 12),
-            Expanded(
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [
-                      color, color.withValues(alpha: 0.6)
-                    ]),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Center(
-                    child: Text('🏠  Home',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ),
-            ),
+            Expanded(child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.6)]),
+                  borderRadius: BorderRadius.circular(16)),
+                child: const Center(child: Text('🏠  Home',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))),
+            )),
           ]),
           const SizedBox(height: 30),
         ]),

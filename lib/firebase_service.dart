@@ -32,10 +32,15 @@ class FirebaseService {
     'tanhaai', 'koi nahi hai', 'sab galat ho raha',
     'mann nahi lag raha', 'bahut dar lag raha', 'ghabrahat',
     'khud se nafrat', 'kuch achha nahi lagta',
+    'depressed', 'empty inside', 'numb', 'crying',
+    'can\'t breathe', 'suffocating', 'trapped',
+    'takleef', 'bechain', 'ro raha', 'ro rahi',
+    'thak gaya', 'thak gayi', 'dard ho raha',
+    'mann udaas', 'bahut bura', 'disturbed', 'restless',
   ];
 
   static const List<String> _level2Keywords = [
-    'hopeless', 'worthless', 'give up', 'what\'s the point',
+    'hopeless', 'worthless', 'useless', 'give up', 'what\'s the point',
     'hate myself', 'no reason to', 'can\'t go on', 'nahi rehna',
     'khatam kar dun', 'sab chod dun', 'disappear',
     'nobody would care', 'bekar hu main', 'koi farak nahi padta',
@@ -44,6 +49,14 @@ class FirebaseService {
     'main bekar hu', 'kuch nahi bacha', 'sab bikhar gaya',
     'kisi ko farak nahi padta', 'main kuch nahi hu',
     'bahut toot gaya', 'bahut toot gayi', 'jee nahi lagta',
+    'no one wants me', 'nobody wants me', 'i am burden',
+    'i\'m a burden', 'better without me', 'don\'t belong',
+    'can\'t take it', 'not worth it', 'hate my life',
+    'life is pointless', 'fayda nahi', 'koi pyaar nahi karta',
+    'sab mere khilaf', 'bekaar zindagi',
+    'nafrat', 'barbaad', 'toot chuka', 'toot chuki',
+    'zindagi bekar', 'jeena mushkil', 'sab khatam kar do',
+    'koi matlab nahi', 'duniya chod', 'khatam karna',
   ];
 
   static const List<String> _level3Keywords = [
@@ -54,6 +67,15 @@ class FirebaseService {
     'jaan de dun', 'zinda nahi rehna', 'khud ko khatam',
     'marna chahta hu', 'marna chahti hu', 'jeene ka koi matlab nahi',
     'apni jaan le lu', 'khud ko hurt', 'self-harm',
+    'i\'ll die', 'wanna die', 'gonna die', 'let me die',
+    'jump off', 'jump from', 'overdose', 'cut myself',
+    'slit', 'hang myself', 'drown myself', 'shoot myself',
+    'die', 'killing myself', 'take my life', 'suicidal',
+    'kood jaun', 'fansi', 'zeher kha lu', 'mar jana hai',
+    'marna', 'marna hai', 'mar jaunga', 'mar jaungi',
+    'maut', 'khudkushi', 'aatmhatya', 'jaan dena',
+    'zinda nahi', 'nahi jeena', 'jee nahi paunga',
+    'jee nahi paungi', 'khatam ho jau', 'mit jau',
   ];
 
   static Map<String, dynamic> analyzeTextForCrisis(String text) {
