@@ -36,21 +36,23 @@ class _ProfileScreenState extends State<ProfileScreen>
   late Animation<double> _avatarScale;
   late Animation<double> _avatarGlow;
 
-  String _name         = '';
-  String _username     = '';
-  String _university   = '';
-  String _joinedDate   = '';
+  String _name           = '';
+  String _username       = '';
+  String _email          = '';
+  String _university     = '';
+  String _joinedDate     = '';
   String _selectedAvatar = '';
-  int    _zenoPoints   = 0;
-  int    _streak       = 0;
-  int    _totalEntries = 0;
+  String _zenoId         = '';
+  int    _zenoPoints     = 0;
+  int    _streak         = 0;
+  int    _totalEntries   = 0;
   List<String> _earnedBadges = [];
   List<Map<String, dynamic>> _weekMoods = [];
-  String _dominantMood = 'Chill';
-  bool _loading = true;
-  bool _notifDaily    = true;
-  bool _notifInsights = true;
-  bool _notifStreak   = true;
+  String _dominantMood   = 'Chill';
+  bool _loading          = true;
+  bool _notifDaily       = true;
+  bool _notifInsights    = true;
+  bool _notifStreak      = true;
 
   final List<Map<String, dynamic>> _avatars = [
     {'emoji': '🧠', 'title': 'Overthinker',  'color': Color(0xFF9B59F5)},
@@ -65,15 +67,15 @@ class _ProfileScreenState extends State<ProfileScreen>
   ];
 
   final List<Map<String, dynamic>> _allBadges = [
-    {'id': 'first_entry',     'icon': '🌱', 'title': 'Baby Steps',      'desc': 'logged first mood',          'genZ': 'origin story unlocked',         'color': Color(0xFF27AE60), 'earned': false},
-    {'id': 'streak_3',        'icon': '🔥', 'title': '3-Day Streak',    'desc': 'consistent king/queen',      'genZ': '3 days? okay we\'re doing this','color': Color(0xFFFF6B35), 'earned': false},
-    {'id': 'streak_7',        'icon': '⚡', 'title': 'Week Warrior',    'desc': '7 days no cap',              'genZ': 'slay consistently bhai',      'color': Color(0xFFFFB800), 'earned': false},
-    {'id': 'vibe_master',     'icon': '🎵', 'title': 'Vibe Master',     'desc': 'vibe slider addict fr',      'genZ': 'no thoughts just vibes',        'color': Color(0xFF9B59F5), 'earned': false},
-    {'id': 'journaler',       'icon': '✍️', 'title': 'Main Character',  'desc': '10 journal entries',         'genZ': 'writing their origin story',    'color': Color(0xFFE91E8C), 'earned': false},
-    {'id': 'emotion_explorer','icon': '🎭', 'title': 'Emotion Otaku',   'desc': 'felt all 7 emotions',        'genZ': 'full spectrum unlocked',        'color': Color(0xFF00B4B4), 'earned': false},
-    {'id': 'streak_30',       'icon': '💎', 'title': 'Diamond Era',     'desc': '30-day streak legend',       'genZ': 'you\'re built different fr',    'color': Color(0xFF4A90D9), 'earned': false},
-    {'id': 'music_lover',     'icon': '🎧', 'title': 'Playlist Feeler', 'desc': 'music mood 5 times',         'genZ': 'spotify knows ur feels',        'color': Color(0xFF1DB954), 'earned': false},
-    {'id': 'artist',          'icon': '🎨', 'title': 'Artsy Soul',      'desc': 'painted 3 mood canvases',    'genZ': 'picasso of feelings no cap',    'color': Color(0xFFFF69B4), 'earned': false},
+    {'id': 'first_entry',     'icon': '🌱', 'title': 'Baby Steps',      'desc': 'logged first mood',       'genZ': 'origin story unlocked',         'color': Color(0xFF27AE60), 'earned': false},
+    {'id': 'streak_3',        'icon': '🔥', 'title': '3-Day Streak',    'desc': 'consistent king/queen',   'genZ': '3 days? okay we\'re doing this','color': Color(0xFFFF6B35), 'earned': false},
+    {'id': 'streak_7',        'icon': '⚡', 'title': 'Week Warrior',    'desc': '7 days no cap',           'genZ': 'slay consistently bhai',        'color': Color(0xFFFFB800), 'earned': false},
+    {'id': 'vibe_master',     'icon': '🎵', 'title': 'Vibe Master',     'desc': 'vibe slider addict fr',   'genZ': 'no thoughts just vibes',        'color': Color(0xFF9B59F5), 'earned': false},
+    {'id': 'journaler',       'icon': '✍️', 'title': 'Main Character',  'desc': '10 journal entries',      'genZ': 'writing their origin story',    'color': Color(0xFFE91E8C), 'earned': false},
+    {'id': 'emotion_explorer','icon': '🎭', 'title': 'Emotion Otaku',   'desc': 'felt all 7 emotions',     'genZ': 'full spectrum unlocked',        'color': Color(0xFF00B4B4), 'earned': false},
+    {'id': 'streak_30',       'icon': '💎', 'title': 'Diamond Era',     'desc': '30-day streak legend',    'genZ': 'you\'re built different fr',    'color': Color(0xFF4A90D9), 'earned': false},
+    {'id': 'music_lover',     'icon': '🎧', 'title': 'Playlist Feeler', 'desc': 'music mood 5 times',      'genZ': 'spotify knows ur feels',        'color': Color(0xFF1DB954), 'earned': false},
+    {'id': 'artist',          'icon': '🎨', 'title': 'Artsy Soul',      'desc': 'painted 3 mood canvases', 'genZ': 'picasso of feelings no cap',    'color': Color(0xFFFF69B4), 'earned': false},
   ];
 
   final List<Map<String, dynamic>> _settings = [
@@ -88,12 +90,12 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
+    _fadeController   = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
     _avatarController = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat(reverse: true);
-    _badgeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
-    _fadeAnim = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
+    _badgeController  = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+    _fadeAnim    = CurvedAnimation(parent: _fadeController,   curve: Curves.easeOut);
     _avatarScale = Tween<double>(begin: 1.0, end: 1.05).animate(CurvedAnimation(parent: _avatarController, curve: Curves.easeInOut));
-    _avatarGlow = Tween<double>(begin: 15.0, end: 30.0).animate(CurvedAnimation(parent: _avatarController, curve: Curves.easeInOut));
+    _avatarGlow  = Tween<double>(begin: 15.0, end: 30.0).animate(CurvedAnimation(parent: _avatarController, curve: Curves.easeInOut));
     themeNotifier.addListener(_onThemeChange);
     _loadData();
   }
@@ -111,7 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
-    final profile = await FirebaseService.getUserProfile();
+    final profile    = await FirebaseService.getUserProfile();
     final weekEntries = await FirebaseService.getWeekEntries();
     if (!mounted) return;
 
@@ -147,13 +149,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     try { final ts = profile?['joinedAt']; if (ts != null) { final dt = (ts as dynamic).toDate() as DateTime; const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; joined = '${months[dt.month - 1]} ${dt.year}'; } } catch (_) {}
 
     setState(() {
-      _name           = (profile?['name'] as String?) ?? 'Zenora User';
+      _name           = (profile?['name']     as String?) ?? 'Zenora User';
       _username       = '@${(profile?['username'] as String?) ?? 'zenorauser'}';
+      _email          = (profile?['email']    as String?) ?? '';
       _university     = (profile?['university'] as String?) ?? 'Chandigarh University';
       _joinedDate     = joined;
-      _selectedAvatar = (profile?['avatar'] as String?) ?? '';
-      _zenoPoints     = (profile?['zenoPoints'] as int?) ?? 0;
-      _streak         = (profile?['streak'] as int?) ?? 0;
+      _selectedAvatar = (profile?['avatar']   as String?) ?? '';
+      _zenoId         = (profile?['zenoId']   as String?) ?? '';
+      _zenoPoints     = (profile?['zenoPoints'] as int?)  ?? 0;
+      _streak         = (profile?['streak']   as int?)    ?? 0;
       _totalEntries   = (profile?['totalEntries'] as int?) ?? 0;
       _earnedBadges   = earnedBadges;
       _weekMoods      = weekMoods;
@@ -175,17 +179,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     ));
   }
 
+  // ── Avatar Picker ────────────────────────────────────────────
   void _openAvatarPicker(String current, Function(String) onPicked) {
     showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
+      context: context, backgroundColor: Colors.transparent, isScrollControlled: true,
       builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A0533),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border.all(color: const Color(0x33FFFFFF)),
-        ),
+        decoration: BoxDecoration(color: const Color(0xFF1A0533), borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), border: Border.all(color: const Color(0x33FFFFFF))),
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
@@ -195,12 +194,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           const Text('who are you rn? 👀', style: TextStyle(color: Colors.white38, fontSize: 12)),
           const SizedBox(height: 16),
           GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.05,
+            shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 1.05,
             children: _avatars.map((av) {
               final isSelected = current == av['emoji'];
               final color = av['color'] as Color;
@@ -208,12 +203,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 onTap: () { HapticFeedback.selectionClick(); onPicked(av['emoji'] as String); Navigator.pop(context); },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  decoration: BoxDecoration(
-                    color: isSelected ? color.withValues(alpha: 0.2) : const Color(0x0DFFFFFF),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: isSelected ? color : const Color(0x1AFFFFFF), width: isSelected ? 2 : 1),
-                    boxShadow: isSelected ? [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8)] : null,
-                  ),
+                  decoration: BoxDecoration(color: isSelected ? color.withValues(alpha: 0.2) : const Color(0x0DFFFFFF), borderRadius: BorderRadius.circular(16), border: Border.all(color: isSelected ? color : const Color(0x1AFFFFFF), width: isSelected ? 2 : 1), boxShadow: isSelected ? [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8)] : null),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Text(av['emoji'] as String, style: const TextStyle(fontSize: 30)),
                     const SizedBox(height: 4),
@@ -229,6 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  // ── Edit Profile ─────────────────────────────────────────────
   void _openEditProfile() {
     final nameCtrl = TextEditingController(text: _name);
     final userCtrl = TextEditingController(text: _username.replaceAll('@', ''));
@@ -241,33 +232,78 @@ class _ProfileScreenState extends State<ProfileScreen>
         child: Container(
           decoration: BoxDecoration(color: const Color(0xFF1A0533), borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), border: Border.all(color: const Color(0x33FFFFFF))),
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
+          child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 16),
             const Text('✏️  Edit Profile', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
+
+            // Avatar
             GestureDetector(
               onTap: () => _openAvatarPicker(tempAvatar, (picked) => setLocal(() => tempAvatar = picked)),
               child: Stack(alignment: Alignment.bottomRight, children: [
-                Container(
-                  width: 80, height: 80,
+                Container(width: 80, height: 80,
                   decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF5C2D91), Color(0xFF007A7A)]), boxShadow: [BoxShadow(color: const Color(0xFF5C2D91).withValues(alpha: 0.4), blurRadius: 16)]),
                   child: Center(child: tempAvatar.isNotEmpty
                       ? Text(tempAvatar, style: const TextStyle(fontSize: 38))
-                      : Text(_name.isNotEmpty ? _name[0].toUpperCase() : 'Z', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold))),
-                ),
+                      : Text(_name.isNotEmpty ? _name[0].toUpperCase() : 'Z', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)))),
                 Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: const Color(0xFF9B59F5), shape: BoxShape.circle, border: Border.all(color: const Color(0xFF0F0F1E), width: 2)), child: const Icon(Icons.edit, color: Colors.white, size: 12)),
               ]),
             ),
             const SizedBox(height: 6),
             const Text('tap to change avatar', style: TextStyle(color: Colors.white38, fontSize: 11)),
             const SizedBox(height: 20),
+
+            // Editable fields
             _editField('Full Name', nameCtrl, Icons.person_outline),
             const SizedBox(height: 14),
             _editField('Username', userCtrl, Icons.alternate_email),
             const SizedBox(height: 14),
             _editField('University', uniCtrl, Icons.school_outlined),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+
+            // PII info section
+            Container(
+              width: double.infinity, padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: const Color(0x0A00B4B4), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF00B4B4).withValues(alpha: 0.3))),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Row(children: [
+                  Text('🔒', style: TextStyle(fontSize: 14)),
+                  SizedBox(width: 6),
+                  Text('Privacy Note', style: TextStyle(color: Color(0xFF00B4B4), fontSize: 12, fontWeight: FontWeight.bold)),
+                ]),
+                const SizedBox(height: 8),
+                // Email display (read only)
+                if (_email.isNotEmpty) ...[
+                  Row(children: [
+                    const Icon(Icons.email_outlined, color: Colors.white38, size: 14),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(_email, style: const TextStyle(color: Colors.white54, fontSize: 12))),
+                  ]),
+                  const SizedBox(height: 6),
+                ],
+                const Text('⚠️ Your name & email are stored separately from research data. They are NEVER used in any academic publication.', style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.4)),
+                const SizedBox(height: 8),
+                // ZN ID display
+                if (_zenoId.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(color: const Color(0xFF9B59F5).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                    child: Row(children: [
+                      const Text('🔑', style: TextStyle(fontSize: 12)),
+                      const SizedBox(width: 6),
+                      const Text('Your Anonymous Zenora ID: ', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                      Text(_zenoId, style: const TextStyle(color: Color(0xFF9B59F5), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () { Clipboard.setData(ClipboardData(text: _zenoId)); _snack('ZN ID copied! 📋'); },
+                        child: const Icon(Icons.copy, color: Color(0xFF9B59F5), size: 14)),
+                    ]),
+                  ),
+              ]),
+            ),
+
+            const SizedBox(height: 20),
             _gradBtn('Save Changes 💾', () async {
               Navigator.pop(context);
               final updates = <String, dynamic>{};
@@ -279,12 +315,55 @@ class _ProfileScreenState extends State<ProfileScreen>
               await _loadData();
               _snack('slay! profile updated ✅');
             }),
-          ]),
+          ])),
         ),
       )),
     );
   }
 
+  // ── Delete All Data ──────────────────────────────────────────
+  void _confirmDeleteData() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1A0533),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('🗑️ Delete All Data', style: TextStyle(color: Colors.white)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: const Color(0xFFE74C3C).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE74C3C).withValues(alpha: 0.3))),
+            child: const Text('⚠️ This will permanently delete:\n• All mood entries\n• Your streak & points\n• Your badges & avatar\n• Your account\n\nThis cannot be undone yaar!', style: TextStyle(color: Colors.white70, height: 1.5, fontSize: 13)),
+          ),
+          const SizedBox(height: 12),
+          const Text('Are you absolutely sure?', style: TextStyle(color: Colors.white54, fontSize: 13)),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel 😌', style: TextStyle(color: Colors.white54))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE74C3C), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            onPressed: () async {
+              Navigator.pop(context);
+              _snack('Deleting all data... 🗑️');
+              try {
+                await FirebaseService.deleteAllUserData();
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => AuthWrapper()),
+                    (route) => false);
+                }
+              } catch (e) {
+                if (mounted) _snack('Delete failed. Try again or email us 😔');
+              }
+            },
+            child: const Text('Yes, Delete Everything', style: TextStyle(color: Colors.white, fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Notifications ────────────────────────────────────────────
   void _openNotifications() {
     showModalBottomSheet(context: context, backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(builder: (ctx, setLocal) => _sheet(title: '🔔  Notifications', child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -292,12 +371,13 @@ class _ProfileScreenState extends State<ProfileScreen>
         _divider(),
         _toggleTile('Weekly Insights', 'your weekly mood report every Sunday', _notifInsights, (v) { setState(() => _notifInsights = v); setLocal(() {}); }),
         _divider(),
-        _toggleTile('Streak Alerts', 'don\'t let the streak die Snapchat ki toh ni todte tum 🔥', _notifStreak, (v) { setState(() => _notifStreak = v); setLocal(() {}); }),
+        _toggleTile('Streak Alerts', 'don\'t let the streak die 🔥', _notifStreak, (v) { setState(() => _notifStreak = v); setLocal(() {}); }),
         const SizedBox(height: 20),
         _gradBtn('Save Preferences 🔔', () { Navigator.pop(ctx); _snack('Notification prefs saved! ✅'); }),
       ]))));
   }
 
+  // ── Privacy ──────────────────────────────────────────────────
   void _openPrivacy() {
     showModalBottomSheet(context: context, backgroundColor: Colors.transparent, isScrollControlled: true,
       builder: (_) => _sheet(title: '🔒  Privacy & Data', child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -307,29 +387,33 @@ class _ProfileScreenState extends State<ProfileScreen>
         _divider(),
         _infoTile('📊', 'Research', 'Only anonymous aggregated data used in publications. Teri diary safe hai 😌'),
         _divider(),
-        _infoTile('🗑️', 'Delete Data', 'Request deletion: ds7794092@gmail.com'),
+        _infoTile('🆔', 'Your Research ID', _zenoId.isNotEmpty ? 'Your anonymous ID is $_zenoId — this is what appears to us, never your name.' : 'Your anonymous ID is being generated.'),
+        _divider(),
+        _infoTile('🗑️', 'Delete Your Data', 'You can permanently delete all your data from Settings below.'),
         const SizedBox(height: 20),
         _gradBtn('Got it! 👍', () => Navigator.pop(context)),
       ])));
   }
 
+  // ── Theme ─────────────────────────────────────────────────────
   void _openThemeSwitcher() {
     showModalBottomSheet(context: context, backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(builder: (ctx, setLocal) => _sheet(title: '🎨  Choose Your Aesthetic', child: Column(mainAxisSize: MainAxisSize.min, children: [
-        _themeOption(ctx, setLocal, ZenoraTheme.dark,   '🌑 Midnight Dark',  'deep navy + teal, classic era',    [Color(0xFF1A0533), Color(0xFF0F0F1E), Color(0xFF003333)]),
+        _themeOption(ctx, setLocal, ZenoraTheme.dark,   '🌑 Midnight Dark',  'deep navy + teal, classic era',  [Color(0xFF1A0533), Color(0xFF0F0F1E), Color(0xFF003333)]),
         const SizedBox(height: 12),
-        _themeOption(ctx, setLocal, ZenoraTheme.purple, '💜 Deep Purple',    'rich purple, villain arc vibes',   [Color(0xFF2D0B5C), Color(0xFF1A0533), Color(0xFF0D0020)]),
+        _themeOption(ctx, setLocal, ZenoraTheme.purple, '💜 Deep Purple',    'rich purple, villain arc vibes', [Color(0xFF2D0B5C), Color(0xFF1A0533), Color(0xFF0D0020)]),
         const SizedBox(height: 12),
-        _themeOption(ctx, setLocal, ZenoraTheme.teal,   '🌊 Ocean Teal',     'cool teal, chill era unlocked',    [Color(0xFF003333), Color(0xFF0F0F1E), Color(0xFF001A1A)]),
+        _themeOption(ctx, setLocal, ZenoraTheme.teal,   '🌊 Ocean Teal',     'cool teal, chill era unlocked',  [Color(0xFF003333), Color(0xFF0F0F1E), Color(0xFF001A1A)]),
       ]))));
   }
 
+  // ── Help ──────────────────────────────────────────────────────
   void _openHelp() {
     final faqs = [
       {'q': 'How do I log my mood? 🎯', 'a': 'Tap any of the 8 expression modes on Home — Journal, Emoji Board, Vibe Slider, Music Mood, and more!'},
       {'q': 'What are Zeno Points? ⚡', 'a': 'Points earned every time you log a mood. Voice mode gives most (+15 pts), quick check-ins give least (+5 pts).'},
       {'q': 'How does the AI work? 🤖', 'a': 'Groq analyzes your text/voice and detects emotion. No data stored permanently.'},
-      {'q': 'Is my data private? 🔒', 'a': 'Yes! All data stored anonymously. Teri diary safe hai yaar 😌'},
+      {'q': 'Is my data private? 🔒', 'a': 'Yes! All data stored anonymously with your ZN ID. Teri diary safe hai yaar 😌'},
       {'q': 'How do I earn badges? 🏅', 'a': 'Auto-earned by logging moods, maintaining streaks, trying all modes!'},
       {'q': 'App is slow/crashing? 😭', 'a': 'Try restarting. If issue persists, email ds7794092@gmail.com!'},
     ];
@@ -350,6 +434,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       ));
   }
 
+  // ── About ─────────────────────────────────────────────────────
   void _openAbout() {
     showModalBottomSheet(context: context, backgroundColor: Colors.transparent, isScrollControlled: true,
       builder: (_) => DraggableScrollableSheet(initialChildSize: 0.85, maxChildSize: 0.95, minChildSize: 0.5,
@@ -413,6 +498,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       ));
   }
 
+  // ── Sign Out ──────────────────────────────────────────────────
   void _confirmSignOut() {
     showDialog(context: context, builder: (_) => AlertDialog(
       backgroundColor: const Color(0xFF1A0533),
@@ -424,15 +510,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE74C3C), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
           onPressed: () async {
-              Navigator.pop(context);
-              await FirebaseService.signOut();
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => AuthWrapper()),
-                  (route) => false,
-                );
-              }
-            },
+            Navigator.pop(context);
+            await FirebaseService.signOut();
+            if (mounted) Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => AuthWrapper()), (route) => false);
+          },
           child: const Text('Sign Out', style: TextStyle(color: Colors.white)),
         ),
       ],
@@ -531,7 +612,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               : FadeTransition(opacity: _fadeAnim, child: RefreshIndicator(
                   onRefresh: _loadData, color: const Color(0xFF9B59F5),
                   child: SingleChildScrollView(physics: const AlwaysScrollableScrollPhysics(), child: Column(children: [
-                    _buildHeader(), _buildStatsRow(), _buildWeekMoods(), _buildBadges(), _buildSettingsList(), const SizedBox(height: 30),
+                    _buildHeader(), _buildStatsRow(), _buildWeekMoods(), _buildBadges(), _buildSettingsList(), _buildDangerZone(), const SizedBox(height: 30),
                   ])))),
         ),
       ),
@@ -580,7 +661,27 @@ class _ProfileScreenState extends State<ProfileScreen>
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.school_outlined, color: Colors.white38, size: 14), const SizedBox(width: 4), Text(_university, style: const TextStyle(color: Colors.white38, fontSize: 12))]),
         const SizedBox(height: 4),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.calendar_today_outlined, color: Colors.white38, size: 12), const SizedBox(width: 4), Text('Joined $_joinedDate', style: const TextStyle(color: Colors.white38, fontSize: 12))]),
-        const SizedBox(height: 14),
+
+        // ZN ID badge
+        if (_zenoId.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () { Clipboard.setData(ClipboardData(text: _zenoId)); _snack('Research ID copied! 📋'); },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(color: const Color(0x1A9B59F5), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF9B59F5).withValues(alpha: 0.3))),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Text('🔑', style: TextStyle(fontSize: 11)),
+                const SizedBox(width: 5),
+                Text(_zenoId, style: const TextStyle(color: Color(0xFF9B59F5), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                const SizedBox(width: 5),
+                const Icon(Icons.copy, color: Color(0xFF9B59F5), size: 11),
+              ]),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(color: const Color(0x1AFFFFFF), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0x33FFFFFF))),
@@ -691,12 +792,38 @@ class _ProfileScreenState extends State<ProfileScreen>
               onTap: () { HapticFeedback.selectionClick(); _onSettingTap(s['label'] as String); },
               leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: (s['color'] as Color).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)), child: Icon(s['icon'] as IconData, color: s['color'] as Color, size: 20)),
               title: Text(s['label'] as String, style: TextStyle(color: isSignOut ? const Color(0xFFE74C3C) : Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
-              subtitle: isSignOut ? const Text('see you soon (Vaps login krle bhai) 👋', style: TextStyle(color: Colors.white24, fontSize: 10)) : null,
+              subtitle: isSignOut ? const Text('see you soon (Aajaiyo) 👋', style: TextStyle(color: Colors.white24, fontSize: 10)) : null,
               trailing: const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
             ),
             if (!isLast) Divider(color: Colors.white.withValues(alpha: 0.05), height: 1, indent: 16, endIndent: 16),
           ]);
         })),
+      ),
+    ]));
+
+  // ── Danger Zone (Delete Data) ─────────────────────────────────
+  Widget _buildDangerZone() => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('⚠️ Danger Zone', style: TextStyle(color: Color(0xFFE74C3C), fontSize: 16, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 6),
+      const Text('these actions are permanent and cannot be undone', style: TextStyle(color: Colors.white38, fontSize: 11)),
+      const SizedBox(height: 14),
+      GestureDetector(
+        onTap: _confirmDeleteData,
+        child: Container(
+          width: double.infinity, padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: const Color(0xFFE74C3C).withValues(alpha: 0.08), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE74C3C).withValues(alpha: 0.4))),
+          child: Row(children: [
+            Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFE74C3C).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.delete_forever, color: Color(0xFFE74C3C), size: 20)),
+            const SizedBox(width: 14),
+            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Delete All My Data', style: TextStyle(color: Color(0xFFE74C3C), fontSize: 14, fontWeight: FontWeight.bold)),
+              Text('permanently removes account + all mood data', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            ])),
+            const Icon(Icons.chevron_right, color: Color(0xFFE74C3C), size: 20),
+          ]),
+        ),
       ),
     ]));
 }
