@@ -48,7 +48,7 @@ Phase 2: Intelligent Adaptation (CURRENT FOCUS) 🚧
 [ ] Dataset Curation: Cleaning and de-identifying initial survey data for training.
 
 Phase 3: Clinical Pilot (UPCOMING)
-[ ] Launch 42-day study with 250 Chandigarh University volunteers.
+[ ] Launch 42-day study with 250 volunteers.
 
 [ ] Perform Pearson Correlation analysis (r) to validate AI accuracy against GAD-7 scores.
 
